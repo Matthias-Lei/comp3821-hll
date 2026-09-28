@@ -1,0 +1,242 @@
+\begin{filecontents*}{shardowstyle_05062025.sty}
+\ProvidesPackage{shardowstyle_05062025}[custom shardow style for latex]
+
+% \usepackage{./styles/shardowstyle_05062025}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+
+\usepackage{titlesec}
+\usepackage{enumitem}
+
+\usepackage{xcolor}
+% \usepackage{ulem}
+% \usepackage[hidelinks]{hyperref}
+
+
+\usepackage{geometry}
+% \geometry{paperwidth=148mm, paperheight=420mm, top=1.27cm, bottom=1.27cm, left=1.27cm, right=1.27cm}
+% \geometry{paperwidth=210mm, paperheight=297mm, top=1.27cm, bottom=1.27cm, left=1.27cm, right=1.27cm}
+\geometry{paperwidth=210mm, paperheight=297mm, top=1.905cm, bottom=1.27cm, left=1.27cm, right=1.27cm}
+
+
+\hyphenpenalty=10000
+
+\setlength\parindent{0pt}
+% \setlength{\columnsep}{-2.54cm}
+
+
+\hypersetup{
+    colorlinks=true,
+    urlcolor=teal,
+    pdfauthor={Matthias Lei},
+    pdftitle={title not set},
+    pdfcreator={Matthias Lei}
+}
+
+
+\renewcommand{\thesection}{}
+\renewcommand{\thesubsection}{}
+\renewcommand{\thesubsubsection}{}
+% \titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{0pt}{}
+\titleformat{\section}{\normalfont\Large\centering\bfseries\slshape}{\thesection}{0pt}{}
+\titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0pt}{}
+\titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{0pt}{}
+
+
+\newcommand{\vecut}[1]{\smash{{\underset{\raisebox{0.25em}{\scalebox{0.75}[0.5]{$\sim$}}}{#1}}}}
+\newcommand{\complexes}{\mathbb{C}}
+\newcommand{\imaginaries}{\mathbb{I}}
+\newcommand{\reals}{\mathbb{R}}
+\newcommand{\rationals}{\mathbb{Q}}
+\newcommand{\integers}{\mathbb{Z}}
+\newcommand{\naturals}{\mathbb{N}}
+\newcommand{\ifonlyif}[1][ ]{\ifmmode\mathrel{\mathit{iff}}\else\textit{iff}#1\fi}
+
+\newcommand{\colouredunderline}[3]{\textcolor{#2}{\uline{\textcolor{#1}{#3}}}}
+\newcommand{\reference}[2]{\colouredunderline{blue}{teal}{\href{#1}{#2}}}
+% \NewDocumentCommand{\urlreference}{v}{\href{#1}{#1}}
+\NewDocumentCommand{\urlreference}{o v}{\IfNoValueTF{#1}{\href{#2}{#2}}{\href{#2}{\scalebox{#1}[1]{#2}}}}
+
+
+\newcommand{\indicator}[2][\phantom{}]{\mathbb{I}_{#1}(#2)}
+\newcommand{\transpose}{\top}
+
+
+
+% \newif\ifhidetemptext
+% \newcommand{\temptext}[1]{%
+%     \ifhidetemptext
+%     \else
+%         \textcolor{gray}{\textsl{#1}}%
+%     \fi
+% }
+
+\newif\ifhidetemptext
+\newcommand{\temptext}[1]{%
+    \ifhidetemptext
+    \else
+        \textcolor{gray}{\textsl{#1}}%
+    \fi
+}
+
+
+\title{title not set}
+\author{Matthias Lei}
+\date{date not set}
+\end{filecontents*}
+
+
+\documentclass[oneside, 12pt, english]{article}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage{wrapfig}
+
+\usepackage{geometry}
+\usepackage{parskip}
+
+% \usepackage{lettrine}
+% \usepackage{stmaryrd}
+% \usepackage{algorithm}
+% \usepackage[ruled]{algorithm2e}
+
+\usepackage{XCharter}
+
+\usepackage{enumerate}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\usepackage[
+    spacing=on, 
+]{microtype}
+
+\renewcommand{\familydefault}{pplj}
+
+\setlength{\parskip}{1.2ex plus 0.2ex minus 0.2ex}
+
+
+\usepackage{geometry}
+
+
+\usepackage{centernot}
+
+
+\usepackage{shardowstyle_05062025}
+
+
+\usepackage{fancyhdr}
+
+
+\makeatletter
+\newsavebox{\blobstarbox}
+\newcommand{\blobstar}{\mathpalette\blobstardraw{}}
+\newcommand{\blobstardraw}[2]{%
+    \sbox\blobstarbox{$#1\mathrm{x}$}%
+    \tikz[baseline=-0.5\ht\blobstarbox, x=\ht\blobstarbox, y=\ht\blobstarbox]{%
+        \fill (0, 1) .. controls (0.15, 0.15) .. (1.25, 0)
+            .. controls (0.15, -0.15) .. (0, -1)
+            .. controls (-0.15, -0.15) .. (-1, 0)
+            .. controls (-0.15, 0.15) .. cycle;%
+    }%
+}
+\makeatother
+
+% $$\blobstar \quad A^{\blobstar} \quad A_{\blobstar} \quad {\Large \blobstar}$$
+% $$\star \quad A^{\star} \quad A_{\star} \quad {\Large \star}$$
+
+
+\definecolor{headergrey}{HTML}{606060}
+\definecolor{headersepgrey}{HTML}{404040}
+\definecolor{headerrulegrey}{HTML}{E0E0E0}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{COMP3821 Workshop 2}
+\fancyhead[R]{\textcolor{headergrey}{Page \thepage}  $\raisebox{0.1em}{\textcolor{headersepgrey}{$\vert$}}$ Matthias Lei}
+% \renewcommand{\headrule}{\color{headerrulegrey}\hrule height 0.3pt}
+% \renewcommand{\headheight}{2.5em}
+% \renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+
+
+\theoremstyle{definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+
+
+
+\hypersetup{
+    pdfauthor={Matthias Lei},
+    pdftitle={title not set},
+    pdfcreator={Matthias Lei}
+}
+
+\title{title not set}
+\author{Matthias Lei}
+\date{September 28, 2026}
+
+
+
+\begin{document}
+
+
+
+\section{Project Proposal Guidelines}
+\temptext{The proposal establishes the initial direction of your project. It should explain what your group intends to investigate or create, why the topic is worthwhile, and how you plan to develop it within the available timeframe.}
+
+Your proposal should address the following:
+
+\subsection{The Topic and Objective}
+\temptext{Define the central question or purpose of the project. Provide enough context for a reader to understand its significance.}
+
+\subsection{The Initial Background}
+\temptext{Identify relevant sources, algorithms, or existing work, and explain how they inform your proposed direction.}
+
+linear counting
+hyper log log
+epilogue?? plus plus
+ultra log log
+
+
+\subsection{The Format and Intended Outcomes}
+\temptext{State the project format, describe what you intend to produce, and explain what the completed work should demonstrate.}
+
+\subsection{The Scope and Approach}
+\temptext{Identify the main ideas or methods you expect to explore. Distinguish the core work you intend to complete from possible extensions.}
+
+\subsection{Plan}
+\temptext{Outline the main stages of the project, how your group will organise the work, and any anticipated difficulties or questions requiring guidance. At this stage, the emphasis is on a well-defined objective, including any evidence of initial understanding and a realistic plan for the timeframe of the project. You should ideally have engaged with the background material enough to explain why your proposed approach is reasonable.}
+
+\temptext{Use your early mentor consultations to discuss the scope and feasibility of your idea. The proposal provides a starting point for the project, and your direction may develop as you learn more. Discuss substantial changes with your mentor and record the reasons in your project notebook.}
+
+
+
+
+
+
+
+
+\clearpage
+
+
+
+
+
+
+
+
+\end{document}
+
+
