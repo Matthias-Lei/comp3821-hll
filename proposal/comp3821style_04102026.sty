@@ -1,0 +1,91 @@
+\ProvidesPackage{comp3821style_04102026}[custom comp3821 style for latex]
+
+% \usepackage{./comp3821style_04102026}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage{wrapfig}
+
+\usepackage{geometry}
+\usepackage{parskip}
+
+% \usepackage{lettrine}
+% \usepackage{stmaryrd}
+% \usepackage{algorithm}
+% \usepackage[ruled]{algorithm2e}
+
+\usepackage{XCharter}
+
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\usepackage[
+    spacing=on,
+    protrusion=false,
+    expansion=alltext
+]{microtype}
+
+\renewcommand{\familydefault}{pplj}
+
+\setlength{\parskip}{1.2ex plus 0.2ex minus 0.2ex}
+
+
+\usepackage{centernot}
+\usepackage{fancyhdr}
+\usepackage{multicol}
+\usepackage{array}
+
+
+\definecolor{headergrey}{HTML}{606060}
+\definecolor{headersepgrey}{HTML}{404040}
+\definecolor{headerrulegrey}{HTML}{E0E0E0}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{COMP3821 Group 15 Project Proposal}
+\fancyhead[R]{\textcolor{headergrey}{Page \thepage} $\raisebox{0.1em}{\textcolor{headersepgrey}{$\vert$}}$ Group 15}
+% \renewcommand{\headrule}{\color{headerrulegrey}\hrule height 0.3pt}
+% \renewcommand{\headheight}{2.5em}
+% \renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+
+
+\theoremstyle{definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+
+
+
+\hypersetup{
+    pdfauthor={Group 15},
+    pdftitle={title not set},
+    pdfcreator={Group 15}
+}
+
+\title{title not set}
+\author{Group 15}
+\date{September 28, 2026}
+
+
+
+
+
+\newcommand{\temptext}[1]{\textcolor{gray}{\textsl{#1}}}
+\newcommand{\fault}[1]{\textcolor{red}{\fontfamily{lmss}\selectfont {#1}}}
+\makeatletter
+\renewcommand{\temptext}[1]{\@ifnextchar\\{\@gobble}{}}
+\renewcommand{\fault}[1]{\@ifnextchar\\{\@gobble}{}}
+\makeatother
+\newcommand{\set}[1]{\{ \, #1 \, \}}
+
+

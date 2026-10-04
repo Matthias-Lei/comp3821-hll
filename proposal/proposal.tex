@@ -1,0 +1,444 @@
+
+\begin{filecontents*}{shardowstyle_v3821_03102026.sty}
+\ProvidesPackage{shardowstyle_v3821_03102026}[custom shardow style for latex]
+
+% \usepackage{./styles/shardowstyle_v3821_03102026}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+
+\usepackage{titlesec}
+\usepackage{enumitem}
+
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+
+\usepackage{geometry}
+% \geometry{paperwidth=148mm, paperheight=420mm, top=1.27cm, bottom=1.27cm, left=1.27cm, right=1.27cm}
+% \geometry{paperwidth=210mm, paperheight=297mm, top=1.27cm, bottom=1.27cm, left=1.27cm, right=1.27cm}
+% proposal spec requires >=2cm margins & >=11pt font size
+\geometry{paperwidth=210mm, paperheight=297mm, top=2cm, bottom=2cm, left=2cm, right=2cm}
+
+
+\hyphenpenalty=10000
+
+\setlength\parindent{0pt}
+% \setlength{\columnsep}{-2.54cm}
+
+
+\hypersetup{
+    hidelinks,
+    colorlinks=true,
+    urlcolor=teal!40!black,
+    linkcolor=teal!20!black,
+    pdfauthor={Group 15},
+    pdftitle={title not set},
+    pdfcreator={Group 15}
+}
+
+
+% \renewcommand{\thesection}{}
+% \renewcommand{\thesubsection}{}
+% \renewcommand{\thesubsubsection}{}
+% % \titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{0pt}{}
+% \titleformat{\section}{\normalfont\Large\centering\bfseries\slshape}{\thesection}{0pt}{}
+% \titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0pt}{}
+% \titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{0pt}{}
+
+
+\newcommand{\vecut}[1]{\smash{{\underset{\raisebox{0.25em}{\scalebox{0.75}[0.5]{$\sim$}}}{#1}}}}
+\newcommand{\complexes}{\mathbb{C}}
+\newcommand{\imaginaries}{\mathbb{I}}
+\newcommand{\reals}{\mathbb{R}}
+\newcommand{\rationals}{\mathbb{Q}}
+\newcommand{\integers}{\mathbb{Z}}
+\newcommand{\naturals}{\mathbb{N}}
+\newcommand{\ifonlyif}[1][ ]{\ifmmode\mathrel{\mathit{iff}}\else\textit{iff}#1\fi}
+
+\NewDocumentCommand{\urlreference}{o v}{\IfNoValueTF{#1}{\href{#2}{#2}}{\href{#2}{\scalebox{#1}[1]{#2}}}}
+
+\newcommand{\indicator}[2][\phantom{}]{\mathbb{I}_{#1}(#2)}
+\newcommand{\transpose}{\top}
+
+\newcommand{\questioncontent}[1]{\textbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+
+\title{title not set}
+\author{Group 15}
+\date{date not set}
+\end{filecontents*}
+
+\begin{filecontents*}{comp3821style_04102026.sty}
+\ProvidesPackage{comp3821style_04102026}[custom comp3821 style for latex]
+
+% \usepackage{./comp3821style_04102026}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+
+\usepackage{amssymb}
+\usepackage{amsthm}
+
+\usepackage[framemethod=tikz]{mdframed}
+\usepackage{wrapfig}
+
+\usepackage{geometry}
+\usepackage{parskip}
+
+% \usepackage{lettrine}
+% \usepackage{stmaryrd}
+% \usepackage{algorithm}
+% \usepackage[ruled]{algorithm2e}
+
+\usepackage{XCharter}
+
+% \usepackage{enumerate}
+\usepackage{booktabs}
+\usepackage{hyperref}
+
+\usepackage[
+    spacing=on,
+    protrusion=false,
+    expansion=alltext
+]{microtype}
+
+\renewcommand{\familydefault}{pplj}
+
+\setlength{\parskip}{1.2ex plus 0.2ex minus 0.2ex}
+
+
+\usepackage{centernot}
+\usepackage{fancyhdr}
+\usepackage{multicol}
+\usepackage{array}
+
+
+\definecolor{headergrey}{HTML}{606060}
+\definecolor{headersepgrey}{HTML}{404040}
+\definecolor{headerrulegrey}{HTML}{E0E0E0}
+
+\pagestyle{fancy}
+\fancyhf{}
+\fancyhead[L]{COMP3821 Group 15 Project Proposal}
+\fancyhead[R]{\textcolor{headergrey}{Page \thepage} $\raisebox{0.1em}{\textcolor{headersepgrey}{$\vert$}}$ Group 15}
+% \renewcommand{\headrule}{\color{headerrulegrey}\hrule height 0.3pt}
+% \renewcommand{\headheight}{2.5em}
+% \renewcommand{\sectionmark}[1]{\markboth{#1}{}}
+
+
+\theoremstyle{definition}
+\newtheorem{theorem}{Theorem}
+\newtheorem{lemma}{Lemma}
+\newtheorem{corollary}{Corollary}
+\newtheorem{proposition}{Proposition}
+\theoremstyle{definition}
+\newtheorem{definition}{Definition}
+
+
+
+
+\hypersetup{
+    pdfauthor={Group 15},
+    pdftitle={title not set},
+    pdfcreator={Group 15}
+}
+
+\title{title not set}
+\author{Group 15}
+\date{September 28, 2026}
+
+
+
+
+
+\newcommand{\temptext}[1]{\textcolor{gray}{\textsl{#1}}}
+\newcommand{\fault}[1]{\textcolor{red}{\fontfamily{lmss}\selectfont {#1}}}
+\makeatletter
+\renewcommand{\temptext}[1]{\@ifnextchar\\{\@gobble}{}}
+\renewcommand{\fault}[1]{\@ifnextchar\\{\@gobble}{}}
+\makeatother
+\newcommand{\set}[1]{\{ \, #1 \, \}}
+
+
+\usepackage{array}
+\end{filecontents*}
+
+
+\documentclass[oneside, 11pt]{article}
+
+\usepackage{shardowstyle_v3821_03102026}
+\usepackage{comp3821style_04102026}
+
+\begin{document}
+
+
+% \section{Project Proposal: Comparing Distinct-Count Sketches Under Equal Memory}
+\section{Comparing Distinct-Count Sketches Under Equal Memory}
+
+% \textbf{Format:} Experimental, supported by short theoretical derivations \\
+% \textbf{Members:} Tinlone Cheng, z5692826, Siddhant Jain (z5692832), Matthias Lei (z5692836), Aaron Li (z5688334), Daniel Zhang (z5693586) \\
+% \textbf{Mentor:} Liam Heng
+
+{
+\fontfamily{ppl}\selectfont
+\begin{tabular}{@{}ll@{}}
+    \textbf{Format:} & Experimental, supported by short theoretical derivations. \\
+    \textbf{Members:} & Tinlone Cheng (z5692826), Siddhant Jain (z5692832), Matthias Lei (z5692836), \\ & Aaron Li (z5688334), Daniel Zhang (z5693586) \\
+    \textbf{Mentor:} & Liam Heng
+\end{tabular}
+}
+
+
+\subsection{Topic and Objective}
+\temptext{Define the central question or purpose of the project. Provide enough context for a reader to understand its significance.} \\
+\temptext{State the central question or purpose precisely. Introduce the problem, relevant assumptions and intended audience. Explain why the topic interests your group and what makes it a worthwhile project. Make the focus clear enough to guide the work. For example, a scholarly project on maximum flow could compare the invariants and correctness arguments of augmenting-path and push-relabel methods. The topic maximum flow algorithms would need this additional focus.}
+
+In large databases with many duplicate elements or keys, it is infeasible to store and compare every individual element to find the number of unique elements. As such, we may require algorithms to perform \textsl{cardinality estimation (CE)}, which allows us to count the number of unique users, generate usage analytics, distribute resources appropriately and optimise query times. 
+
+Our audience is COMP3821 students who know hashing and basic probability but have not learnt about streaming sketches.
+% Modern databases contain many elements, some of which may be duplicated.
+% If this database represents a log of requests from users of a large application, it is useful to filter out the number of unique users, so as to generate usage analytics, distribute resources appropriately or look for anomalous usage.
+% Thus, it is of interest to create an algorithm that estimates the number of unique elements in such a database without having to store and compare elements individually, as doing so would consume excessive memory and time.
+
+Many techniques exist for estimating cardinality with varying accuracy and variance of their estimates, parallelisability, running time, memory consumption and scalability.
+In particular, we will focus on probabilistic data structures, and analyse how, under equivalent memory budgets, bitmap-based, filter-based, order-statistic based and register-based algorithms differ in estimation accuracy and mergeability across different cardinality regimes, as well as how well their theoretical error guarantees predict the observed errors. 
+
+Our objective is to determine which algorithm is `best' (lowest bias and RMSE) under a particular set of circumstances by analytically and empirically analysing them. 
+
+% \begin{itemize}[noitemsep]
+%     \item how close (or far) from the true answer each algorithm is compared to its theoretical guarantee, as well as the variance of its answer.
+%     \item which algorithm performs 'best', according to a defined metric, such as RMSE.
+%     \item whether and how well the algorithm can merge two disjoint partitions of a stream with memory budget $B$ and cardinalities $d_1$ and $d_2$ into a single sketch with memory budget $B$ and cardinality $d_1 + d_2$, and how accurate this is.
+% \end{itemize}
+
+% Many systems have to count the distinct items in a stream containing billions of elements, such as values in a database column, where counting the items through hash sets are prohibitively inefficient in space complexity. 
+
+\subsection{Initial Background and Understanding}
+\temptext{Identify relevant sources, algorithms, or existing work, and explain how they inform your proposed direction.} \\
+\temptext{A short and purposeful selection of sources is sufficient; there is no required number of references. Include a brief, concrete explanation that demonstrates initial engagement: an idea, worked example, comparison between methods, or a mathematical difficulty your resource will explain. Give enough detail to show what you understand. State what you will still need to learn and distinguish established results from questions you intend to investigate.}
+
+% first half will be explaination of CE, + explaination of the important desired characteristics (why, how). here we can touch upon common metrics as well but mostly as an aside (most of that will come in 1.4). 
+% second half will be focusing on the algos we will look at (which algos, where they are from, very very very basic details if any at all (basically our current understanding rn))
+Cardinality estimation (CE), commonly referred to as the Count-Distinct Problem (CDP), is the problem of estimating the number of distinct elements in a multiset or data stream without having to examine every element. Instead, we use probabilistic sketches that trade a small amount of accuracy for large gains in speed and memory efficiency.
+
+The canonical application of CDP is counting the unique visitors of a high traffic website or the unique IP addresses in a large network. Another primary use case is query optimisation in databases. Query planners rely on cardinality estimates to efficiently choose join orders, select access methods, and allocate resources. Poor estimates will result in significantly slower queries, so accurate and efficient CE is critical.
+
+Several characteristics should be considered when choosing a CE algorithm. Accuracy is the most important, as the estimate should have low bias and variance, typically measured by relative error. Next, in terms of speed, updates and queries need to be sufficiently fast for streaming data. Memory efficiency is important as the sketch must operate efficiently under the memory budgets it is designed for. Scalability matters too, for the algorithm must handle high volume/bandwidth streams of distinct elements. Finally, mergeability allows multiple sketches be efficiently merged without spending extra resources reprocessing.
+
+We will use the original paper for each family of algorithms as our primary source.
+\hyperref[whang1990]{Whang et al.} introduced Linear Counting, an estimator which reads cardinality directly from the fraction of empty bits in a bitmap. If $n$ distinct items are hashed uniformly into $m$ bits, a given bit stays empty with probability $(1 - 1 / m)^n\approx e^{-n / m}$, so if $V$ is the observed fraction of empty bits, $\hat{n}= -m \ln V$. The estimate fails once the bitmap saturates ($V=0$). It serves as our baseline because its bias and variance can be derived from first principles, making it a reliable reference for judging more complex estimators.
+
+Similarly, \hyperref[flajolet1985]{Flajolet and Martin's} probabilistic counting scheme also uses a bitmap, but introduces stochastic averaging, using many small bitmaps, on which later register-based methods are build on.
+
+Not every sketch employs a register-based method. \hyperref[baryossef2002]{Bar-Yossef et al.} proposed the $k$-minimum-values estimator, which encodes stream information fundamentally differently. It retains an ordered sample of the smallest hash values rather than using a fixed-size occupancy pattern. This lets us test whether the accuracy of our cardinality estimate depends on the sketch's representation or on the number of bits it is allocated.
+
+The register-based path then develops into the LogLog family. It begins with \hyperref[durand2003]{Durand and Flajolet's} original LogLog (LL) and continues with \hyperref[flajolet2007]{Flajolet et al.'s} HyperLogLog (HLL). HLL replaces LL's geometric mean with a harmonic mean and adjusts the error constant. \hyperref[heule2013]{Heule et al.'s} HyperLogLog++ adds bias correction and sparse representation, making the method reliable at small cardinalities.
+
+% Project timeline seems to ignore ULL so I'll strip it for now
+% We will also use the \href{https://vldb.org/pvldb/vol10/p1094-harmouch.pdf}{Harmouch--Naumann} experimental survey, which classifies twelve cardinality estimation algorithms by main idea, error guarantee, advantages and disadvantages, to guide our justification for which algorithms belong in our comparison and which we can reasonably set aside.
+
+%\clearpage
+
+\subsection{Format and Intended Outcomes}
+\temptext{State the project format, describe what you intend to produce, and explain what the completed work should demonstrate.} \\
+\temptext{State the project format(s) and what you intend to produce. Explain the substantial algorithmic work involved and what the completed project should demonstrate. Every format includes the final report and poster; identify any additional resource, implementation, or creative work you expect to develop. Distinguish between a manageable core set of ideas from possible extensions. The core should provide a worthwhile project even if a more ambitious direction proves unsuccessful. Set clear boundaries on the problems, results, or features you will address.}
+We will complete an experimental project by implementing our stream generator and algorithms in C++, then using Python scripts to orchestrate the pipeline and collect/analyse the results. Each algorithm will be evaluated on the same series of tests, primarily comparing their ability to estimate the number of distinct elements in a large data stream without storing every item. 
+We will implement the algorithms identified, namely linear counting, $k$-minimum values, bloom filters and HyperLogLog (HLL). If time permits, we will also implement extensions of the LogLog family, in particular HLL++ and UltraLogLog. Across various lengths of data streams, we will test or analyse:
+
+\begin{itemize}[noitemsep]
+    \item accuracy of the estimate, measured by bias, RMSE and 95\% confidence intervals for fixed memory budgets $B \in \set{1, \, 4, \, 8, \, 16} \, \text{KiB}$.
+    \item observed RMSE of each sketch against the predicted theoretical guarantee and its variance
+    \item mergeability of two disjoint partitions of a stream  
+\end{itemize}
+
+
+The calculation of expectations, probabilities, and `simple' distributions such as the Binomial and Poisson will be introduced, as well as the definitions of (sample) mean and variance for use in derivations or mathematical proofs.
+Where proofs or definitions are far beyond the scope of the course, such as the Beta distribution in KMV or Mellin Transform in the HLL proof, we will quote results instead of deriving them.
+
+% For fair comparison, algorithms have shared memory limits (1,4,8,16 KiB), data stored by the algorithm \& any extra information it needs to maintain its estimate. Thus we will choose the largest bitmap, set of HLL registers, KMV sample which fits within each limit, whilst reporting actual storage used, excluding memory used to run shared hash functions, analyse experimental results or store the input stream. 
+
+Results and derivations will be compiled in the report and poster, and compare the different approaches, examining the assumptions they rely on, how they work, mathematical guarantees and derivations, as well as how they trade off space, accuracy and mergeability.
+
+
+
+\fault{Intended outcomes are a unified comparative framework for distinct-element cardinality sketches covering invariants, estimator derivations, space/accuracy trade-offs, mergeability, and assumptions.}
+
+\fault{The mathematical component will include detailed treatment of results that are feasible within the project timeframe. We intend to derive the Linear Counting estimator from expected bitmap occupancy and explain the KMV estimator using uniform order statistics. For HLL, we will explain its register invariant, stochastic averaging, estimator construction, and approximate error behaviour, while citing the deeper asymptotic analysis underlying its error constant.}
+
+\fault{The project should ultimately demonstrate that estimation accuracy cannot be considered independently of the sketch's underlying representation. An algorithm may perform well in one cardinality range but lose information through bitmap saturation, insufficient retained samples, register discretisation, or estimator bias in another.}
+
+\subsection{Proposed Approaches and Evaluations}
+\temptext{Identify the main ideas or methods you expect to explore. Distinguish the core work you intend to complete from possible extensions.} \\
+\temptext{Explain how you will pursue the objective and why the approach is reasonable. Identify the main methods and arguments, comparisons, experiments, or design activities you expect to use. Describe how you will assess correctness and the quality of the intended outcomes, using the guidance of your format in the next section. Identify any significant uncertainties or dependencies, such as unfamiliar background, an unproven claim, access to suitable inputs or implementation time. Explain a realistic response: maybe a restricted setting, an alternative method, a smaller resource or a revised question. You do not need to resolve these difficulties before submitting.}
+
+We propose to compare and analyse the effectiveness of each CE algorithm in different circumstances by deriving theoretical predictions for the expected value and error bounds of each algorithm to predict their accuracy. We will then implement each algorithm with the same hash function with their original papers as the main source and to design experiments to both compare the theoretical and experimental characteristics of each algorithm, and to compare the algorithms against each other. 
+
+% We will determine and derive theoretical predictions for the expected value and error bounds of each algorithm to predict their accuracy.
+As the mathematical proof for HLL is beyond the scope of this project, we will instead use the published error formula from \hyperref[flajolet2007]{Flajolet et al.} and explain the intuition behind it. 
+
+% To test our algorithms, we will implement them as per their original papers (with corrections as necessary), and run our experiments. We will use the same (not necessarily cryptographically secure) hash function for each algorithm.
+
+% Implement the algorithms from their original papers, using a single 64-bit hash function for equal testing conditions. 
+
+Our current experimental approach is to test the algorithms using the four memory budgets from above, varying the number of unique items from very small counts to very large streams, with multiple trials and different hash seeds, from which we can calculate the root-mean square error and average systematic error (bias). For each measurement, we will run $T = 64$ trials, and calculate the mean and sample standard deviation, the standard errors of which reduce as $\frac{1}{\sqrt{T}}$.
+
+Additionally, we will attempt to source some \hyperref[rahn2016]{SQL databases} to test our algorithms on. If this turns out to be too difficult (whether that be because the datasets are too large to process locally, or our SQL ability turns out to be insufficient to allow us to pass it in), we will fall back to dynamically generating data in Python.
+
+To compare the sketches fairly, we give each the same memory budget $B$, counted in bits of sketch state, which is the data the algorithm stores plus any extra information it needs to maintain its estimate, but excluding the hash function, the analysis code and the input stream. We choose the largest bitmap, set of HLL registers or KMV sample that fits within each limit, and report the storage actually used. For instance, Linear Counting and the Bloom filter use a bitmap of up to $B$ bits, KMV stores up to $B/64$ hash values. Every sketch uses the same seeded 64-bit hash function. Our test streams are random 64-bit identifiers with duplicates chosen uniformly at random, and we repeat the runs with a skewed distribution.
+
+We treat a theoretical prediction as \textsl{confirmed} when it falls inside the 95\% interval of the measured RMSE, within the range of $n$ where that estimator's formula applies. Where it does not, we investigate and explain the gap.
+
+We check each implementation against an exact hash-set count on small streams (KMV must be exact for $n<k$), confirm that repeats and reordering leave the sketch state unchanged, confirm that a merged sketch has the same state as one built directly from the union, and compare estimates with a reference implementation. Over many seeds the mean error should match each estimator's predicted bias.
+
+We also plan to empirically analyse other characteristics of these algorithms, such as the mergeability. I.e., whether and how well the algorithm can merge two disjoint partitions of a stream with memory budget $B$ and cardinalities $d_1$ and $d_2$ into a single sketch with memory budget $B$ and cardinality $d_1 + d_2$, and how accurate this is.
+
+% \temptext{note: just pasted in}
+% For each measurement, we will run $n = 64$ trials, and calculate the mean and sample standard deviation, the errors of which reduce as per $\frac{1}{\sqrt{n}}$.
+
+% \temptext{pasted from 1.1}
+% we assign a memory budget $B$ and data stream with $d$ elements  
+% \begin{itemize}[noitemsep]
+%     \item whether and how well the algorithm can merge two disjoint partitions of a stream with memory budget $B$ and cardinalities $d_1$ and $d_2$ into a single sketch with memory budget $B$ and cardinality $d_1 + d_2$, and how accurate this is.
+% \end{itemize}
+
+% \clearpage
+
+
+\subsection{Plan}
+% \temptext{Outline the main stages of the project, how your group will organise the work, and any anticipated difficulties or questions requiring guidance. At this stage, the emphasis is on a well-defined objective, including any evidence of initial understanding and a realistic plan for the timeframe of the project. You should ideally have engaged with the background material enough to explain why your proposed approach is reasonable.} \\
+
+\temptext{Give milestones leading to the Week 7 progression review and Week 10 poster and final report. Each should identify a concrete outcome: a more developed argument, comparisons between methods studied, implementations, or a resource ready for a walkthrough. Explain how your group will allocate work, review contributions and develop a shared understanding. Identify immediate next steps and questions for your mentor. A compact table is sufficient.}
+
+% \subsubsection{Project Stages and Milestones}
+% % \begin{multicols}{2}
+
+% \begin{tabular}{p{4cm} p{12.6cm}}
+% \toprule
+% Assessment Stage & Milestones \\
+% \midrule
+% Stage 2 (Week 7) & \vspace{-0.5em} \begin{itemize}[leftmargin=*, noitemsep]
+%     \item Construct an operating testing environment to compare different algorithms
+%     \item Complete implementation for linear counting, k-minimum values and HLL. 
+%     \item Conduct mathematical analysis (accuracy and precision of estimate and time + space complexity) for at least 2 of the above algorithms.
+% \end{itemize}
+% \\[0.5em]
+% \\Stage 3 (Week 10) & \vspace{-0.5em} \begin{itemize}[leftmargin=*, noitemsep]
+%     \item Complete implementation for Bloom Filter and HLL++. 
+%     \item Conduct mathematical analysis for all remaining implemented algorithms.
+%     \item Collate results into poster and write-up
+% \end{itemize}
+% \\ \bottomrule
+% \end{tabular}
+
+% % \end{multicols}
+
+
+
+\subsubsection{Project Stages, Milestones and Timeline}
+% \noindent
+\begingroup
+\renewcommand{\arraystretch}{0.85}
+\begin{tabular}{p{2.2cm} p{8.2cm} p{5.6cm}}
+    \toprule
+    \textbf{Week} & \textbf{Actions} & \textbf{Milestones} \\
+    \midrule
+    {\fontfamily{ppl}\selectfont 3}\phantom{0} (Stage I) & Set up repo. Assign roles. & Finalise proposal.
+    \\ {\fontfamily{ppl}\selectfont 4}\phantom{0} & Define algorithms to research. Implement a data generator and choose a hash function to use, and linear counting. & Have the linear counting algorithm pass all tests.
+    \\ {\fontfamily{ppl}\selectfont 5}\phantom{0} & Mathematically analyse linear counting and compare against empirical results. Implement $k$-minimum values and HLL. & Have derivations match empirical results, and working KMV and HLL algorithms.
+    \\ {\fontfamily{ppl}\selectfont 6}\phantom{0} & Analyse $k$-minimum values and HLL. Prepare write-up draft for progress check. & Code generates required graphics/figures.
+    \\ {\fontfamily{ppl}\selectfont 7}\phantom{0} (Stage II) & Implement Bloom Filter. Plan format and contents of poster. & Have preliminary results available for presentation.
+    \\ {\fontfamily{ppl}\selectfont 8}\phantom{0} & Implement HLL++. Mathematically analyse Bloom Filter. Add rough available results and mathematical analysis to poster draft. & All algorithms tested and integrated.
+    \\ {\fontfamily{ppl}\selectfont 9}\phantom{0} & Mathematically analyse HLL++. Design bulk of poster and finalise write-up. & Draft peer reviewed and extensions completed.
+    \\ {\fontfamily{ppl}\selectfont 10} (Stage III) & Finalise poster and write-up with HLL++ results. & Submission ready.
+    \\
+    \bottomrule
+\end{tabular}
+\endgroup
+
+
+\subsubsection{Organisation and Challenge Resolution}
+Documents and programs will be shared \href{https://github.com/SHArdowYT/comp3821-hll}{via Github}, and tasks will be tracked through GitHub Issues.
+Meetings and messages will be hosted on Discord/Teams with asynchronous messages whenever updates are made to keep everyone in the loop.
+
+Each algorithm will have an implementation owner and a second member who reviews it and produces mathematical proofs as required. If an unresolvable discrepancy arises, another member of the group will arbitrate.
+Code changes will go through pull requests, approved by a third party. Meetings will be held weekly and findings will be updated in a shared draft of the project.
+
+We will rotate practising the presentation of algorithms. 
+
+
+\temptext{Use your early mentor consultations to discuss the scope and feasibility of your idea. The proposal provides a starting point for the project, and your direction may develop as you learn more. Discuss substantial changes with your mentor and record the reasons in your project notebook.}
+
+
+\clearpage
+
+\section{References}
+
+% \textbf{%
+%     \ignorespaces Furthermore, these online resources helped me.
+% }
+
+% \begin{itemize}[label=--]
+%     \fontfamily{ppl}\selectfont
+%     \item \urlreference{https://cgi.cse.unsw.edu.au/~cs2521/26T2/dsa-manual}
+%     \item \urlreference[0.875]{https://moodle.telt.unsw.edu.au/pluginfile.php/15401209/mod_folder/content/0/Week%201.tex}
+% \end{itemize}
+% https://en.wikipedia.org/wiki/HyperLogLog
+% https://github.com/gregrahn/join-order-benchmark
+
+
+% \begin{enumerate}[label={[\arabic*]}, noitemsep]
+%     \fontfamily{ppl}\selectfont
+%     \item K.-Y. Whang, B. T. Vander-Zanden, H. M. Taylor, A linear-time probabilistic counting
+%     algorithm for database applications, \emph{ACM TODS} 15(2):208--229, 1990.
+%     \url{https://dl.acm.org/doi/10.1145/78922.78925}
+%     \item Z. Bar-Yossef et al., Counting distinct elements in a data stream, \emph{RANDOM} 2002, 1--10.
+%     \url{https://link.springer.com/chapter/10.1007/3-540-45726-7_1}
+%     \item P. Flajolet, \'E. Fusy, O. Gandouet, F. Meunier, HyperLogLog: the analysis of a
+%     near-optimal cardinality estimation algorithm, \emph{AofA} 2007, 127--146.
+%     \url{https://dmtcs.episciences.org/3545/pdf}
+%     \item H. Harmouch, F. Naumann, Cardinality estimation: an experimental survey,
+%     \emph{PVLDB} 11(4):499--512, 2017.
+% \end{enumerate}
+
+
+
+
+% \begin{enumerate}[label={\arabic*}, noitemsep, leftmargin=*]
+\begin{enumerate}[label={\arabic*}, noitemsep]
+    \fontfamily{ppl}\selectfont
+    \item \label{baryossef2002} \textbf{Bar-Yossef, Z., Jayram, T. S., Kumar, R., Sivakumar, D. and Trevisan, L.} (2002) \\ ``Counting Distinct Elements in a Data Stream'', \textsl{Randomization and Approximation Techniques in Computer Science}, volume 2483 of \textsl{Lecture Notes in Computer Science}, pages 1--10. \\ DOI: 10.1007/3-540-45726-7\_1
+    \item \label{beyer2007} \textbf{Beyer, K. S., Haas, P. J., Reinwald, B., Sismanis, Y. and Gemulla, R.} (2007) \\ ``On synopses for distinct-value estimation under multiset operations'', \textsl{Proceedings of the 2007 ACM SIGMOD International Conference on Management of Data}, pages 199--210.\\ DOI: 10.1145/1247480.1247504
+    \item \label{durand2003} \textbf{Durand, M. and Flajolet, P.} (2003) \\ ``Loglog Counting of Large Cardinalities'', \\ \textsl{Algorithms - ESA 2003}, volume 2832 of \textsl{Lecture Notes in Computer Science}, pages 605--617. \\ DOI: 10.1007/978-3-540-39658-1\_55
+    \item \label{flajolet1985} \textbf{Flajolet, P. and Martin, G. N.} (1985) \\ ``Probabilistic counting algorithms for data base applications'', \textsl{Journal of Computer and System Sciences}, volume 31, issue 2, pages 182--209. \\ DOI: 10.1016/0022-0000(85)90041-8
+    \item \label{flajolet2007} \textbf{Flajolet, P., Fusy, \'E., Gandouet, O. and Meunier, F.} (2007) \\ ``HyperLogLog: The analysis of a near-optimal cardinality estimation algorithm'', \\ \textsl{Proceedings of the AOFA 2007 (DMTCS Proceedings AH)}, pages 127--146. \\ DOI: 10.1145/3534678.3539246
+    \item \label{heule2013} \textbf{Heule, S., Nunkesser, M. and Hall, A.} (2013) \\ ``HyperLogLog in practice: Algorithmic engineering of a state of the art cardinality estimation algorithm'', \textsl{Proceedings of the 16th International Conference on Extending Database Technology}, pages 683--692. \\ DOI: 10.1145/2452376.2452456
+    \item \label{questdb2025} \textbf{QuestDB} 2025, \textsl{Cardinality estimation}, QuestDB, accessed October 4 2026, \\ <\urlreference{https://questdb.com/glossary/cardinality-estimation/}>
+    \item \label{rahn2016} \textbf{Rahn, G.} 2016, \textsl{join-order-benchmark}, GitHub, accessed October 4 2026, \\ <\urlreference{https://github.com/gregrahn/join-order-benchmark}>
+    \item \label{unsw2026} \textbf{UNSW} 2026, \textsl{Week 1 Workshop TeX Template}, UNSW Moodle, accessed September 18 2026, \\ <\urlreference[0.91]{https://moodle.telt.unsw.edu.au/pluginfile.php/15401209/mod_folder/content/0/Week\%201.tex}>
+    \item \label{unsw2025} \textbf{UNSW} 2025, \textsl{UNSW Harvard Referencing Guide}, UNSW Sydney, accessed October 4 2026, \\ <\urlreference[0.79]{https://www.unsw.edu.au/student/managing-your-studies/academic-skills-support/toolkit/referencing/harvard}>
+    \item \label{whang1990} \textbf{Whang, K. Y., Vander-Zanden, B.T. and Taylor, H.M.} (1990) \\ ``A linear-time probabilistic counting algorithm for database applications'', \\ \textsl{ACM Transactions on Database Systems}, volume 15, issue 2, pages 208--229. \\ DOI: 10.1145/78922.78925
+\end{enumerate}
+% \begin{enumerate}[label={\arabic*}, noitemsep]
+%     \fontfamily{ppl}\selectfont
+%     \item \label{questdb2025} \textbf{QuestDB} 2025, \textsl{Cardinality estimation}, QuestDB, accessed October 4 2026, \\ <\urlreference{https://questdb.com/glossary/cardinality-estimation/}>
+%     \item \label{rahn2016} \textbf{Rahn, G.} 2016, \textsl{join-order-benchmark}, GitHub, accessed October 4 2026, \\ <\urlreference{https://github.com/gregrahn/join-order-benchmark}>
+%     \item \label{flajolet1985} \textbf{Flajolet, P. and Martin, G. N.} (1985) ``Probabilistic counting algorithms for data base applications'', \textsl{Journal of Computer and System Sciences}, volume 31, issue 2, pages 182--209. DOI: 10.1016/0022-0000(85)90041-8
+%     \item \label{whang1990} \textbf{Whang, K. Y., Vander-Zanden, B.T. and Taylor, H.M.} (1990) \\ ``A linear-time probabilistic counting algorithm for database applications'', \\ \textsl{ACM Transactions on Database Systems}, volume 15, issue 2, pages 208--229. \\ DOI: 10.1145/78922.78925
+%     \item \label{beyer2007} \textbf{Beyer, K. S., Haas, P. J., Reinwald, B., Sismanis, Y. and Gemulla, R.} (2007) \\ ``On synopses for distinct-value estimation under multiset operations'', \textsl{Proceedings of the 2007 ACM SIGMOD International Conference on Management of Data}, pages 199--210.\\ DOI: 10.1145/1247480.1247504
+%     \item \label{durand2003} \textbf{Durand, M. and Flajolet, P.} (2003) \\ ``Loglog Counting of Large Cardinalities'', \\ \textsl{Algorithms - ESA 2003}, volume 2832 of \textsl{Lecture Notes in Computer Science}, pages 605--617. \\ DOI: 10.1007/978-3-540-39658-1\_55
+%     \item \label{flajolet2007} \textbf{Flajolet, P., Fusy, \'E., Gandouet, O. and Meunier, F.} (2007) \\ ``HyperLogLog: The analysis of a near-optimal cardinality estimation algorithm'', \\ \textsl{Proceedings of the AOFA 2007 (DMTCS Proceedings AH)}, pages 127--146. \\ DOI: 10.1145/3534678.3539246
+%     \item \label{heule2013} \textbf{Heule, S., Nunkesser, M. and Hall, A.} (2013) \\ ``HyperLogLog in practice: Algorithmic engineering of a state of the art cardinality estimation algorithm'', \textsl{Proceedings of the 16th International Conference on Extending Database Technology}, pages 683--692. \\ DOI: 10.1145/2452376.2452456
+%     \item \label{baryossef2002} \textbf{Bar-Yossef, Z., Jayram, T. S., Kumar, R., Sivakumar, D. and Trevisan, L.} (2002) \\ ``Counting Distinct Elements in a Data Stream'', \textsl{Randomization and Approximation Techniques in Computer Science}, volume 2483 of \textsl{Lecture Notes in Computer Science}, pages 1--10. \\ DOI: 10.1007/3-540-45726-7\_1
+%     \item \label{unsw2026} \textbf{UNSW} 2026, \textsl{Week 1 Workshop TeX Template}, UNSW Moodle, accessed September 18 2026, \\ <\urlreference[0.91]{https://moodle.telt.unsw.edu.au/pluginfile.php/15401209/mod_folder/content/0/Week\%201.tex}>
+%     \item \label{unsw2025} \textbf{UNSW} 2025, \textsl{UNSW Harvard Referencing Guide}, UNSW Sydney, accessed October 4 2026, \\ <\urlreference[0.79]{https://www.unsw.edu.au/student/managing-your-studies/academic-skills-support/toolkit/referencing/harvard}>
+% \end{enumerate}
+
+
+
+\end{document}
+
+

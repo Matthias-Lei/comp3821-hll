@@ -1,0 +1,69 @@
+\ProvidesPackage{shardowstyle_v3821_03102026}[custom shardow style for latex]
+
+% \usepackage{./styles/shardowstyle_v3821_03102026}
+
+\usepackage{amsmath}
+\usepackage{amsfonts}
+\usepackage{mathtools}
+
+\usepackage{titlesec}
+\usepackage{enumitem}
+
+\usepackage{xcolor}
+\usepackage{hyperref}
+
+
+\usepackage{geometry}
+% \geometry{paperwidth=148mm, paperheight=420mm, top=1.27cm, bottom=1.27cm, left=1.27cm, right=1.27cm}
+% \geometry{paperwidth=210mm, paperheight=297mm, top=1.27cm, bottom=1.27cm, left=1.27cm, right=1.27cm}
+% proposal spec requires >=2cm margins & >=11pt font size
+\geometry{paperwidth=210mm, paperheight=297mm, top=2cm, bottom=2cm, left=2cm, right=2cm}
+
+
+\hyphenpenalty=10000
+
+\setlength\parindent{0pt}
+% \setlength{\columnsep}{-2.54cm}
+
+
+\hypersetup{
+    hidelinks,
+    colorlinks=true,
+    urlcolor=teal!40!black,
+    linkcolor=teal!20!black,
+    pdfauthor={Group 15},
+    pdftitle={title not set},
+    pdfcreator={Group 15}
+}
+
+
+% \renewcommand{\thesection}{}
+% \renewcommand{\thesubsection}{}
+% \renewcommand{\thesubsubsection}{}
+% % \titleformat{\section}{\normalfont\Large\bfseries}{\thesection}{0pt}{}
+% \titleformat{\section}{\normalfont\Large\centering\bfseries\slshape}{\thesection}{0pt}{}
+% \titleformat{\subsection}{\normalfont\large\bfseries}{\thesubsection}{0pt}{}
+% \titleformat{\subsubsection}{\normalfont\normalsize\bfseries}{\thesubsubsection}{0pt}{}
+
+
+\newcommand{\vecut}[1]{\smash{{\underset{\raisebox{0.25em}{\scalebox{0.75}[0.5]{$\sim$}}}{#1}}}}
+\newcommand{\complexes}{\mathbb{C}}
+\newcommand{\imaginaries}{\mathbb{I}}
+\newcommand{\reals}{\mathbb{R}}
+\newcommand{\rationals}{\mathbb{Q}}
+\newcommand{\integers}{\mathbb{Z}}
+\newcommand{\naturals}{\mathbb{N}}
+\newcommand{\ifonlyif}[1][ ]{\ifmmode\mathrel{\mathit{iff}}\else\textit{iff}#1\fi}
+
+\NewDocumentCommand{\urlreference}{o v}{\IfNoValueTF{#1}{\href{#2}{#2}}{\href{#2}{\scalebox{#1}[1]{#2}}}}
+
+\newcommand{\indicator}[2][\phantom{}]{\mathbb{I}_{#1}(#2)}
+\newcommand{\transpose}{\top}
+
+\newcommand{\questioncontent}[1]{\textbf{#1}}
+\newcommand{\code}[1]{\texttt{#1}}
+
+
+\title{title not set}
+\author{Group 15}
+\date{date not set}
