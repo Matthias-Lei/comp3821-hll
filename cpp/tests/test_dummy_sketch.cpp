@@ -7,7 +7,7 @@
 #include <string>
 #include <vector>
 
-static const std::string kPath = "./data/streams/test_dummy_stream.bin";
+static const std::string kPath = "/tmp/test_dummy_stream.bin";
 
 static void write_stream(const std::vector<uint64_t>& data)
 {
