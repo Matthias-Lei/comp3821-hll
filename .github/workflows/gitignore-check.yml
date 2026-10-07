@@ -1,0 +1,23 @@
+name: gitignore check
+
+on: [push]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+
+            - name: Check for stray files based on .gitignore
+              run: |
+                TRACKED_IGNORED_FILES=$(git ls-files --ignored --exclude-standard -c)
+                if [ -n "$TRACKED_IGNORED_FILES" ]; then
+                    echo "Found files violating .gitignore:"
+                    echo "$TRACKED_IGNORED_FILES" | sed "s/^/    /"
+                    exit 1
+                else
+                    echo "All files respect .gitignore"
+                    exit 0
+                fi
