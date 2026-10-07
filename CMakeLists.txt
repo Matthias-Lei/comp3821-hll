@@ -16,10 +16,6 @@ target_include_directories(sketches
     PRIVATE cpp/external
 )
 
-add_executable(benchmark cpp/src/main.cpp)
-target_include_directories(benchmark PRIVATE cpp/external)
-target_link_libraries(benchmark PRIVATE sketches)
-
 add_executable(benchmarks cpp/bench/bench.cpp)
 target_include_directories(benchmarks PRIVATE cpp/external)
 target_link_libraries(benchmarks PRIVATE sketches benchmark::benchmark)
