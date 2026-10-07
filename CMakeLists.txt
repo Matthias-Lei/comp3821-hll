@@ -8,7 +8,22 @@ if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
 endif()
 
-find_package(benchmark REQUIRED)
+find_package(benchmark QUIET)
+if(NOT benchmark_FOUND)
+    message(STATUS "benchmark not found on system — fetching via FetchContent")
+    include(FetchContent)
+    FetchContent_Declare(
+        benchmark
+        GIT_REPOSITORY https://github.com/google/benchmark.git
+        GIT_TAG        v1.9.5
+    )
+    set(BENCHMARK_ENABLE_TESTING OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_INSTALL OFF CACHE BOOL "" FORCE)
+    set(BENCHMARK_ENABLE_GTEST_TESTS OFF CACHE BOOL "" FORCE)
+    FetchContent_MakeAvailable(benchmark)
+else()
+    message(STATUS "Using system benchmark: ${benchmark_DIR}")
+endif()
 
 add_library(sketches cpp/src/dummy_sketch.cpp)
 target_include_directories(sketches
