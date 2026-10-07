@@ -8,3 +8,10 @@
 *.run.xml
 *.synctex.gz
 *.toc
+
+build/
+data/
+*.arrow
+*.o
+.DS_Store
+__pycache__/
