@@ -1,0 +1,28 @@
+name: python run
+
+on: [push]
+
+jobs:
+    build:
+        runs-on: ubuntu-latest
+
+        steps:
+            - name: Checkout
+              uses: actions/checkout@v7
+
+            - name: Install Python
+              uses: actions/setup-python@v7
+              with:
+                python-version: "3.13"
+
+            - name: Install Python Dependencies
+              run: pip install -r python/requirements.txt
+
+            - name: Run Make
+              run: make -C python
+
+            - name: Run demo.py
+              run: python3 python/demo.py
+
+            - name: Run create_test_streams.py
+              run: python3 python/create_test_streams.py --make-directories

@@ -1,0 +1,6 @@
+*.o
+*.so
+/__pycache__
+/.venv/
+/bin
+/data/streams
