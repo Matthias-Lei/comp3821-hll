@@ -1,12 +1,13 @@
 import sys
 from pathlib import Path
 from generator import Generator, DistributionSampler
-from serialiser import CEBSStream, Serialiser, StreamDestination, StreamType
+from serialiser import CEBSObject, CEBSStream, Serialiser, StreamLocation, StreamType
 
-
-CEBS_OUTPUT_DIR = Path("./data/streams")
 
 if __name__ == "__main__":
+
+    BASE_DIR = Path(__file__).resolve().parent.parent
+    CEBS_OUTPUT_DIR = BASE_DIR / "data" / "streams"
 
     if not CEBS_OUTPUT_DIR.exists():
         if "--make-directories" not in sys.argv:
@@ -18,50 +19,49 @@ if __name__ == "__main__":
 
     generator = Generator.get_generator("python_test_range")
     data = generator.generate(0, 20, 2)
-    stream = CEBSStream().to_bytes(data, stream_type=StreamType.UINT64)
+    stream = CEBSObject(stream=CEBSStream(data, StreamType.UINT64)).to_bytes()
 
     path = CEBS_OUTPUT_DIR / "range_python.cebs"
 
-    serialiser.write_stream(stream, StreamDestination.TEMP_FILE, path=path)
+    serialiser.write_stream(stream, StreamLocation.TEMP_FILE, path=path)
 
     print(f"Wrote {len(data)} values to {path}")
 
     SEED = 7427369
-    distribution_generator = Generator.get_generator("distribution", seed=SEED)
+    distribution_generator = Generator.get_generator(f"distribution", seed=SEED)
     for distribution in DistributionSampler.supported_distributions():
         data = distribution_generator.generate(distribution, int(1E4))
-        stream = CEBSStream().to_bytes(data)
+        stream = CEBSObject(stream=CEBSStream(data, StreamType.UINT64)).to_bytes()
 
-        path = CEBS_OUTPUT_DIR / f"{distribution}.cebs"
-        serialiser.write_stream(stream, StreamDestination.TEMP_FILE, path=path)
+        path = CEBS_OUTPUT_DIR / f"{distribution}_seed{SEED}.cebs"
+        serialiser.write_stream(stream, StreamLocation.TEMP_FILE, path=path)
 
         print(f"Wrote {len(data)} values to {path}")
 
 
-    observation_generator = Generator.get_generator("observations", seed=SEED)
+    observation_generator = Generator.get_generator(f"observations", seed=SEED)
     for distribution in DistributionSampler.supported_distributions():
         data = observation_generator.generate(distribution, int(1E4))
-        stream = CEBSStream().to_bytes(data)
+        stream = CEBSObject(stream=CEBSStream(data, StreamType.UINT64)).to_bytes()
 
-        path = CEBS_OUTPUT_DIR / f"{distribution}_observations.cebs"
-        serialiser.write_stream(stream, StreamDestination.TEMP_FILE, path=path)
+        path = CEBS_OUTPUT_DIR / f"{distribution}_observations_seed{SEED}.cebs"
+        serialiser.write_stream(stream, StreamLocation.TEMP_FILE, path=path)
 
         print(f"Wrote {len(data)} values to {path}")
 
 
-    uuid_generator = Generator.get_generator("uuid", seed=SEED)
+    uuid_generator = Generator.get_generator(f"uuid", seed=SEED)
     data = uuid_generator.generate(20)
-    stream = CEBSStream().to_bytes(data, stream_type=StreamType.UUID)
+    stream = CEBSObject(stream=CEBSStream(data, StreamType.UUID)).to_bytes()
 
-    path = CEBS_OUTPUT_DIR / "uuid.cebs"
-    serialiser.write_stream(stream, StreamDestination.TEMP_FILE, path=path)
+    path = CEBS_OUTPUT_DIR / f"uuid_seed{SEED}.cebs"
+    serialiser.write_stream(stream, StreamLocation.TEMP_FILE, path=path)
 
     print(f"Wrote {len(data)} values to {path}")
 
 
-    from serialiser import cebs_to_string
-
-    sharedmemory, cleanup = serialiser.write_stream(stream, StreamDestination.SHARED_MEMORY)
+    sharedmemory, cleanup = serialiser.write_stream(stream, StreamLocation.SHARED_MEMORY)
     shared_stream = bytes(sharedmemory.buf[:len(stream)])
-    print(f"Shared memory stream:\n{cebs_to_string(shared_stream)}")
+    print(f"Shared memory stream:\n{shared_stream}")
     cleanup()
+

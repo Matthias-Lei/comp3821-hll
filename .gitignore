@@ -8,3 +8,6 @@
 *.run.xml
 *.synctex.gz
 *.toc
+
+/data/streams
+

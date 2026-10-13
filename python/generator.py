@@ -7,8 +7,8 @@ import numpy.typing as npt
 from typing import Optional
 import uuid
 
-BASE_DIR = Path(__file__).resolve().parent
-LIBGENERATOR_PATH = BASE_DIR / "bin" / "libgenerator.so"
+PARENT_DIR = Path(__file__).resolve().parent
+LIBGENERATOR_PATH = PARENT_DIR / "bin" / "libgenerator.so"
 
 
 class Generator(ABC):
@@ -44,7 +44,7 @@ class CTestRangeGenerator(Generator):
         class CArray(ctypes.Structure):
             _fields_ = [
                 ("data", ctypes.c_void_p),
-                ("length", ctypes.c_int),
+                ("length", ctypes.c_uint64),
             ]
 
         self.CArray = CArray
@@ -91,7 +91,7 @@ class DistributionSampler:
     }
 
     PARAMETER_REBINDS = {
-        "lambda": "l",
+        "lambda": "lambda_",
     }
 
     def __init__(self, seed: int) -> None:
@@ -103,6 +103,8 @@ class DistributionSampler:
 
     def _parse_parameters(self, distribution: str, **params: float) -> dict:
         defaults = self.SUPPORTED_DISTRIBUTIONS[distribution]["params"]
+        rebinds = {value: key for key, value in self.PARAMETER_REBINDS.items()}
+        params = {rebinds.get(key, key): value for key, value in params.items()}
         for key in params:
             if key not in defaults:
                 raise ValueError(f"invalid parameter {key}")
@@ -131,8 +133,8 @@ class DistributionSampler:
     def _generate_negative_binomial(self, nsamples: int, k: int, p: float) -> npt.NDArray[np.int64]:
         return (self.rng.negative_binomial(k, p, size=nsamples) + k).astype(np.int64)
 
-    def _generate_poisson(self, nsamples: int, l: float) -> npt.NDArray[np.int64]:
-        return self.rng.poisson(l, size=nsamples).astype(np.int64)
+    def _generate_poisson(self, nsamples: int, lambda_: float) -> npt.NDArray[np.int64]:
+        return self.rng.poisson(lambda_, size=nsamples).astype(np.int64)
 
     def _generate_uniform(self, nsamples: int, a: float, b: float) -> npt.NDArray[np.float64]:
         return self.rng.uniform(a, b, size=nsamples)
@@ -146,11 +148,11 @@ class DistributionSampler:
     def _generate_t(self, nsamples: int, df: int) -> npt.NDArray[np.float64]:
         return self.rng.standard_t(df, size=nsamples)
 
-    def _generate_exponential(self, nsamples: int, l: float) -> npt.NDArray[np.float64]:
-        return self.rng.exponential(1 / l, size=nsamples)
+    def _generate_exponential(self, nsamples: int, lambda_: float) -> npt.NDArray[np.float64]:
+        return self.rng.exponential(1 / lambda_, size=nsamples)
 
-    def _generate_gamma(self, nsamples: int, alpha: float, l: float) -> npt.NDArray[np.float64]:
-        return self.rng.gamma(alpha, 1 / l, size=nsamples)
+    def _generate_gamma(self, nsamples: int, alpha: float, lambda_: float) -> npt.NDArray[np.float64]:
+        return self.rng.gamma(alpha, 1 / lambda_, size=nsamples)
 
     def _generate_chi_squared(self, nsamples: int, df: int) -> npt.NDArray[np.float64]:
         return self.rng.chisquare(df, size=nsamples)
@@ -158,8 +160,8 @@ class DistributionSampler:
     def _generate_beta(self, nsamples: int, alpha: float, beta: float) -> npt.NDArray[np.float64]:
         return self.rng.beta(alpha, beta, size=nsamples)
 
-    def _generate_pareto(self, nsamples: int, alpha: float, l: float) -> npt.NDArray[np.float64]:
-        return l * self.rng.pareto(alpha, size=nsamples)
+    def _generate_pareto(self, nsamples: int, alpha: float, lambda_: float) -> npt.NDArray[np.float64]:
+        return lambda_ * self.rng.pareto(alpha, size=nsamples)
 
 
 
@@ -176,8 +178,8 @@ class DistributionGenerator(Generator):
         result = self.sampler.sample(distribution, nsamples, **params)
 
         if result.dtype == np.float64:
-            minimum, range = result.min(), result.max() - result.min()
-            result = np.floor((result - minimum) / range * self.bins) / self.bins * range + minimum
+            minimum, span = result.min(), result.max() - result.min()
+            result = np.floor((result - minimum) / span * (self.bins - 1)) / (self.bins - 1) * span + minimum
 
         return result
 
@@ -191,8 +193,15 @@ class ObservationsGenerator(Generator):
         result = self.sampler.sample(distribution, m, **params)
 
         if result.dtype == np.float64:
+
+            if result.size == 0:
+                return result.astype(np.int64)
+
             minimum, maximum = result.min(), result.max()
-            result = np.floor((result - minimum) / (maximum - minimum) * (m - 1))
+            if maximum - minimum == 0:
+                result = np.zeros_like(result)
+            else:
+                result = np.floor((result - minimum) / (maximum - minimum) * (m - 1))
 
         return result.astype(np.int64)
 

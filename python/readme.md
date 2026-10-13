@@ -8,8 +8,8 @@ python3 -m venv .venv
 source .venv/bin/activate
 python3 -m pip install -r requirements.txt
 make
-python3 main.py
 python3 create_test_streams.py
+python3 demo.py
 ```
 
 
@@ -75,8 +75,8 @@ Returns an `np.ndarray[np.int64]` for discrete distributions and `np.ndarray[np.
 Continuous distributions are quantised to a default of 1024 possible values.
 
 ## observations
-`generate(distribution, nsamples, **params)`
-Generate n samples from a distribution, with each sample occuring a number of times proportional to the result of sampling the distribution.
+`generate(distribution, m, **params)`
+Generate m samples from a distribution, with each sample occuring a number of times proportional to the result of sampling the distribution.
 Returns an `np.ndarray[np.int64]`
 
 ## uuid
