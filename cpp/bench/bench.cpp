@@ -5,7 +5,6 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
-#include <mm_file/mm_file.hpp>
 #include <stdexcept>
 #include <string>
 
@@ -43,17 +42,19 @@ static void run_accuracy(benchmark::State& state, const uint64_t* data, std::siz
         state.counters["bits"] = benchmark::Counter(static_cast<double>(memory_bits));
 }
 
+#include "cebs_stream.hpp"
+// remove: #include <mm_file/mm_file.hpp>  (no longer needed here)
+
 static void BM_DummySketch(benchmark::State& state)
 {
         const std::size_t memory_bits = static_cast<std::size_t>(state.range(0));
 
-        mm::file_source<uint64_t> stream(g_stream_path, mm::advice::sequential);
-        const uint64_t* data = stream.data();
+        CebsStream stream(g_stream_path);
+        const std::uint64_t* data = stream.data();
         const std::size_t n = stream.size();
 
-        // warm pages
-        volatile uint64_t sink = 0;
-        for (std::size_t i = 0; i < n; i += 4096 / sizeof(uint64_t))
+        volatile std::uint64_t sink = 0;
+        for (std::size_t i = 0; i < n; i += 4096 / sizeof(std::uint64_t))
                 sink ^= data[i];
         (void)sink;
 

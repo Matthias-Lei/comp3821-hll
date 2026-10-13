@@ -31,6 +31,7 @@ OTHER DEALINGS IN THE SOFTWARE.
 #include <sys/stat.h>
 #include <type_traits>
 #include <unistd.h> // close(fd)
+#include <stdexcept>
 
 namespace mm {
 
