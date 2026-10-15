@@ -35,3 +35,10 @@ Run the benchmark:
 
 Streams are named `seed{N}_n{M}.bin`, where `M` is the true distinct count.
 `data/` is gitignored.
+
+## Shared hash
+
+`cpp/include/hash.hpp` provides `hash64(value, seed)`: XXH64 of the value's 8 bytes, least
+significant byte first. CMake fetches xxHash v0.8.4 (BSD 2-Clause) at configure time.
+
+`test_hash` checks known outputs and a fixed-seed chi-square test (1,000,000 keys, 1024 buckets, p > 0.01).
