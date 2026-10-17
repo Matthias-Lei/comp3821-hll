@@ -8,8 +8,8 @@
 #include <stdexcept>
 #include <string>
 
+#include "cebs_stream.hpp"
 #include "dummy_sketch.hpp"
-#include "sketch.hpp"
 
 static std::string g_stream_path;
 static uint64_t g_true_n = 0;
@@ -41,9 +41,6 @@ static void run_accuracy(benchmark::State& state, const uint64_t* data, std::siz
         state.counters["rel_err"] = benchmark::Counter(rel_err);
         state.counters["bits"] = benchmark::Counter(static_cast<double>(memory_bits));
 }
-
-#include "cebs_stream.hpp"
-// remove: #include <mm_file/mm_file.hpp>  (no longer needed here)
 
 static void BM_DummySketch(benchmark::State& state)
 {
