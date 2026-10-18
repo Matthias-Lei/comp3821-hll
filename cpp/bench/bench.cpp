@@ -11,8 +11,11 @@
 
 #include "cebs_stream.hpp"
 #include "dummy_sketch.hpp"
+#include "hash.hpp"
+#include "sketch.hpp"
 
 static std::string g_stream_path;
+static constexpr uint64_t kHashSeed = 1;
 
 static uint64_t get_true_n(const std::uint64_t* data, std::size_t n)
 {
@@ -26,7 +29,7 @@ static void run_accuracy(benchmark::State& state, const uint64_t* data, std::siz
 {
         auto sketch = make(memory_bits);
         for (std::size_t i = 0; i < n; ++i)
-                sketch->update(data[i]);
+                sketch->update(hash64(data[i], kHashSeed));
 
         const double est = sketch->estimate();
         const double rel_err
@@ -55,7 +58,7 @@ static void BM_DummySketch(benchmark::State& state)
         for (auto _ : state) {
                 DummySketch sketch;
                 for (std::size_t i = 0; i < n; ++i)
-                        sketch.update(data[i]);
+                        sketch.update(hash64(data[i], kHashSeed));
                 const double est = sketch.estimate();
                 benchmark::DoNotOptimize(est);
         }

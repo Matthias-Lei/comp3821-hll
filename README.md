@@ -60,3 +60,11 @@ e.g.
 ```
 
 Streams are generated in data/streams/ and follow the naming convention name_seed{N}.cebs (or range_python.cebs). The data/ directory is gitignored.
+
+## Shared hash
+
+`cpp/include/hash.hpp` provides `hash64(value, seed)`: XXH64 of the value's 8 bytes, least
+significant byte first. CMake fetches xxHash v0.8.4 (BSD 2-Clause) at configure time.
+
+`test_hash` checks known outputs and a fixed-seed chi-square test (1,000,000 keys, 1024 buckets, p > 0.01).
+

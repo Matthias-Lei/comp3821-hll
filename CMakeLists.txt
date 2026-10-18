@@ -26,9 +26,23 @@ else()
     message(STATUS "Using system benchmark: ${benchmark_DIR}")
 endif()
 
+# xxHash has no CMakeLists.txt at its root, so it is populated directly.
+cmake_policy(SET CMP0169 OLD)
+include(FetchContent)
+FetchContent_Declare(
+    xxhash
+    GIT_REPOSITORY https://github.com/Cyan4973/xxHash.git
+    GIT_TAG        v0.8.4
+    GIT_SHALLOW    TRUE
+)
+FetchContent_GetProperties(xxhash)
+if(NOT xxhash_POPULATED)
+    FetchContent_Populate(xxhash)
+endif()
+
 add_library(sketches cpp/src/dummy_sketch.cpp)
 target_include_directories(sketches
-    PUBLIC  cpp/include
+    PUBLIC  cpp/include ${xxhash_SOURCE_DIR}
     PRIVATE cpp/external
 )
 
@@ -41,6 +55,10 @@ add_executable(test_dummy_sketch cpp/tests/test_dummy_sketch.cpp)
 target_include_directories(test_dummy_sketch PRIVATE cpp/external)
 target_link_libraries(test_dummy_sketch PRIVATE sketches)
 add_test(NAME dummy_sketch COMMAND test_dummy_sketch)
+
+add_executable(test_hash cpp/tests/test_hash.cpp)
+target_link_libraries(test_hash PRIVATE sketches)
+add_test(NAME hash COMMAND test_hash)
 
 find_program(CCMAKE_EXECUTABLE NAMES ccmake)
 if(CCMAKE_EXECUTABLE)
