@@ -66,7 +66,12 @@ static void BM_DummySketch(benchmark::State& state)
         run_accuracy(state, data, n, memory_bits,
             [](std::size_t) { return std::make_unique<DummySketch>(); });
 }
-BENCHMARK(BM_DummySketch)->Arg(1024)->Arg(4096)->Arg(16384)->Unit(benchmark::kMillisecond);
+BENCHMARK(BM_DummySketch)
+    ->Arg(8192)
+    ->Arg(32768)
+    ->Arg(65536)
+    ->Arg(131072)
+    ->Unit(benchmark::kMillisecond);
 
 int main(int argc, char** argv)
 {

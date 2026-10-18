@@ -40,7 +40,11 @@ int main()
         for (std::size_t i = 0; i < stream.size(); ++i)
                 sketch.update(stream.data()[i]);
 
-        assert(sketch.estimate() == 3.0);
+        if (sketch.estimate() != 3.0) {
+                std::cerr << "test failed: expected 3.0, got " << sketch.estimate() << "\n";
+                return 1;
+        }
+
         std::cout << "test_dummy_sketch passed\n";
         return 0;
 }
