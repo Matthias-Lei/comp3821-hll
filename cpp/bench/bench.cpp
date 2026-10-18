@@ -7,26 +7,22 @@
 #include <memory>
 #include <stdexcept>
 #include <string>
+#include <unordered_set>
 
 #include "cebs_stream.hpp"
 #include "dummy_sketch.hpp"
 
 static std::string g_stream_path;
-static uint64_t g_true_n = 0;
 
-static uint64_t parse_true_n(const std::string& path)
+static uint64_t get_true_n(const std::uint64_t* data, std::size_t n)
 {
-        // expects ..._n{M}.bin
-        const auto pos = path.rfind("_n");
-        const auto dot = path.rfind('.');
-        if (pos == std::string::npos || dot == std::string::npos || dot <= pos + 2)
-                throw std::runtime_error("cannot parse true_n from path: " + path);
-        return std::stoull(path.substr(pos + 2, dot - (pos + 2)));
+        std::unordered_set<uint64_t> distinct(data, data + n);
+        return distinct.size();
 }
 
 template <class MakeSketch>
 static void run_accuracy(benchmark::State& state, const uint64_t* data, std::size_t n,
-    std::size_t memory_bits, MakeSketch make)
+    std::size_t memory_bits, std::size_t true_n, MakeSketch make)
 {
         auto sketch = make(memory_bits);
         for (std::size_t i = 0; i < n; ++i)
@@ -34,10 +30,10 @@ static void run_accuracy(benchmark::State& state, const uint64_t* data, std::siz
 
         const double est = sketch->estimate();
         const double rel_err
-            = std::abs(est - static_cast<double>(g_true_n)) / static_cast<double>(g_true_n);
+            = std::abs(est - static_cast<double>(true_n)) / static_cast<double>(true_n);
 
         state.counters["estimate"] = benchmark::Counter(est);
-        state.counters["true_n"] = benchmark::Counter(static_cast<double>(g_true_n));
+        state.counters["true_n"] = benchmark::Counter(static_cast<double>(true_n));
         state.counters["rel_err"] = benchmark::Counter(rel_err);
         state.counters["bits"] = benchmark::Counter(static_cast<double>(memory_bits));
 }
@@ -50,6 +46,7 @@ static void BM_DummySketch(benchmark::State& state)
         const std::uint64_t* data = stream.data();
         const std::size_t n = stream.size();
 
+        const uint64_t true_n = get_true_n(data, n);
         volatile std::uint64_t sink = 0;
         for (std::size_t i = 0; i < n; i += 4096 / sizeof(std::uint64_t))
                 sink ^= data[i];
@@ -63,7 +60,7 @@ static void BM_DummySketch(benchmark::State& state)
                 benchmark::DoNotOptimize(est);
         }
 
-        run_accuracy(state, data, n, memory_bits,
+        run_accuracy(state, data, n, memory_bits, true_n,
             [](std::size_t) { return std::make_unique<DummySketch>(); });
 }
 BENCHMARK(BM_DummySketch)
@@ -81,7 +78,6 @@ int main(int argc, char** argv)
         }
 
         g_stream_path = argv[1];
-        g_true_n = parse_true_n(g_stream_path);
 
         for (int i = 1; i < argc - 1; ++i)
                 argv[i] = argv[i + 1];

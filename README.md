@@ -22,8 +22,8 @@ cmake --build build
 Run the benchmark:
 
 ```sh
-./build/benchmarks data/streams/seed{N}_n{M}.cebs --benchmark_format=json
+./build/benchmarks data/streams/distribution_seed{N}.cebs --benchmark_format=json
 ```
 
-Streams are named `seed{N}_n{M}.cebs`, where `M` is the true distinct count.
+Streams are named `distribution_seed{N}.cebs`.
 `data/` is gitignored.
