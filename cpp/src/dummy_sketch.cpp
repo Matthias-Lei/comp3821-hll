@@ -5,7 +5,7 @@ void DummySketch::update(uint64_t x)
         seen_.insert(x);
 }
 
-double DummySketch::estimate() const
+std::optional<double> DummySketch::estimate() const
 {
         return static_cast<double>(seen_.size());
 }

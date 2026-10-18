@@ -5,6 +5,7 @@
 #include <cstring>
 #include <fstream>
 #include <iostream>
+#include <optional>
 #include <string>
 #include <vector>
 
@@ -40,8 +41,10 @@ int main()
         for (std::size_t i = 0; i < stream.size(); ++i)
                 sketch.update(stream.data()[i]);
 
-        if (sketch.estimate() != 3.0) {
-                std::cerr << "test failed: expected 3.0, got " << sketch.estimate() << "\n";
+        const std::optional<double> est = sketch.estimate();
+        if (est != 3.0) {
+                std::cerr << "test failed: expected 3.0, got "
+                          << (est ? std::to_string(*est) : "no estimate") << "\n";
                 return 1;
         }
 
