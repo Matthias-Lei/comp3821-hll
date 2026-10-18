@@ -25,5 +25,5 @@ Run the benchmark:
 ./build/benchmarks data/streams/seed{N}_n{M}.cebs --benchmark_format=json
 ```
 
-Streams are named `seed{N}_n{M}.bin`, where `M` is the true distinct count.
+Streams are named `seed{N}_n{M}.cebs`, where `M` is the true distinct count.
 `data/` is gitignored.
