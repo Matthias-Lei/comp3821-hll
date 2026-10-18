@@ -5,14 +5,12 @@
 #include <cstring>
 #include <iostream>
 #include <memory>
-#include <stdexcept>
 #include <string>
 #include <unordered_set>
 
 #include "cebs_stream.hpp"
 #include "dummy_sketch.hpp"
 #include "hash.hpp"
-#include "sketch.hpp"
 
 static std::string g_stream_path;
 static constexpr uint64_t kHashSeed = 1;
@@ -59,7 +57,7 @@ static void BM_DummySketch(benchmark::State& state)
                 DummySketch sketch;
                 for (std::size_t i = 0; i < n; ++i)
                         sketch.update(hash64(data[i], kHashSeed));
-                const double est = sketch.estimate();
+                double est = sketch.estimate();
                 benchmark::DoNotOptimize(est);
         }
 
