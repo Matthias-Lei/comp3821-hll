@@ -13,6 +13,7 @@ class CebsStream {
 public:
         static constexpr std::uint64_t kHeaderSize = 128;
         static constexpr std::uint64_t kStreamUint64 = 0x00;
+        static constexpr std::uint64_t kStreamInt64 = 0x01;
 
         explicit CebsStream(const std::string& path)
                 : mmap_(path, mm::advice::sequential)
@@ -30,7 +31,7 @@ public:
                 bytes_per_element_ = read_u64(base + 24);
                 number_of_units_ = read_u64(base + 32);
 
-                if (stype != kStreamUint64)
+                if (stype != kStreamUint64 && stype != kStreamInt64)
                         throw std::runtime_error("CEBS: expected uint64 stream, got type "
                             + std::to_string(stype) + " in " + path);
                 if (bytes_per_element_ == 0)

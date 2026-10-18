@@ -3,6 +3,7 @@ project(cardinality_sketches CXX)
 
 set(CMAKE_CXX_STANDARD 20)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
+set(CMAKE_EXPORT_COMPILE_COMMANDS ON)
 
 if(NOT CMAKE_BUILD_TYPE)
     set(CMAKE_BUILD_TYPE Release)
@@ -58,3 +59,16 @@ add_test(NAME dummy_sketch COMMAND test_dummy_sketch)
 add_executable(test_hash cpp/tests/test_hash.cpp)
 target_link_libraries(test_hash PRIVATE sketches)
 add_test(NAME hash COMMAND test_hash)
+
+find_program(CCMAKE_EXECUTABLE NAMES ccmake)
+if(CCMAKE_EXECUTABLE)
+    add_custom_target(ccmake
+        COMMAND ${CCMAKE_EXECUTABLE} ${CMAKE_SOURCE_DIR}
+        WORKING_DIRECTORY ${CMAKE_BINARY_DIR}
+        USES_TERMINAL
+        COMMENT "Launching ccmake in ${CMAKE_BINARY_DIR}"
+    )
+    message(STATUS "ccmake found: ${CCMAKE_EXECUTABLE} — target 'ccmake' available")
+else()
+    message(STATUS "ccmake not found — skipping 'ccmake' target")
+endif()
