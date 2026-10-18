@@ -9,5 +9,11 @@
 *.synctex.gz
 *.toc
 
-/data/streams
+build/
+data/
+*.arrow
+*.o
+.DS_Store
+__pycache__/
 
+/data/streams
