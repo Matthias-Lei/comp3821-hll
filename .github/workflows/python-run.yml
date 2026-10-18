@@ -27,6 +27,6 @@ jobs:
             - name: Run demo.py
               run: python3 python/demo.py
 
-            - name: Run test.py
-              run: python3 python/test.py
-
+            - name: Run pytest
+              working-directory: python
+              run: PYTHONPATH=. python3 -m pytest -v tests/

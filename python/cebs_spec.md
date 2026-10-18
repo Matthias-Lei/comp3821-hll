@@ -6,13 +6,12 @@
 | Offset | Size | Type      | Field                | Notes                                                                  |
 |-------:|-----:|-----------|----------------------|------------------------------------------------------------------------|
 |      0 |    4 | uint8[4]  | `magic`              | `0x43 0x45 0x42 0x53` = `CEBS`                                         |
-|      4 |    4 | uint8[4]  | `version`            | `0x61 0x00 0x00 0x01` = version `a.0.0.1`                              |
+|      4 |    4 | uint8[4]  | `version`            | `0x61 0x00 0x00 0x00` = version `a.0.0.0`                              |
 |      8 |    8 | uint64_le | `data_start`         | Read as uint32_le                                                      |
 |     16 |    8 | uint64_le | `stream_type`        | Read as uint32_le                                                      |
 |     24 |    8 | uint64_le | `bytes_per_element`  | Read as uint32_le                                                      |
 |     32 |    8 | uint64_le | `number_of_elements` | Read as uint32_le                                                      |
-|     40 |    8 | uint64_le | `unique_elements`    | Read as uint32_le                                                      |
-|     48 |   88 | uint8[88] | `reserved`           |                                                                        |
+|     40 |   88 | uint8[88] | `reserved`           |                                                                        |
 
 
 
@@ -39,13 +38,12 @@
 ```
 Offset    Hex                                 Field
      0    43 45 42 53                         magic = "CEBS"
-     4    61 00 00 01                         version = a.0.0.1
+     4    61 00 00 00                         version = a.0.0.0
      8    80 00 00 00 00 00 00 00             data_start = 128
     16    00 00 00 00 00 00 00 00             stream_type = uint64
     24    08 00 00 00 00 00 00 00             bytes_per_element = 8
-    32    0A 00 00 00 00 00 00 00             number_of_elements = 10
-    40    0A 00 00 00 00 00 00 00             unique_elements = 10
-    48    ?? ?? ... ?? (88 bytes)             reserved
+    32    0a 00 00 00 00 00 00 00             number_of_elements = 10
+    40    ?? ?? ... ?? (88 bytes)             reserved
 
    128    00 00 00 00 00 00 00 00             value[0]   = 0
    136    02 00 00 00 00 00 00 00             value[1]   = 2

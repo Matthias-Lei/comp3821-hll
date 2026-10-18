@@ -23,26 +23,33 @@ HEADER_SIZE = 128
 @dataclass
 class CEBSHeader:
     magic: bytes = b"CEBS"
-    version: bytes = "a\0\0\1".encode()
+    version: bytes = "a\0\0\0".encode()
     data_start: int = HEADER_SIZE
     stream_type: StreamType = StreamType.INVALID
     bytes_per_unit: int = 0x00000008
     number_of_units: int = 0x00000000
     reserved: bytes = bytes(88)
 
-    def to_bytes(self, data_start: int | None = None, stream_type: StreamType | None = None, bytes_per_unit: int | None = None, number_of_units: int | None = None) -> bytes:
-        if data_start is not None: self.data_start = data_start
-        if stream_type is not None: self.stream_type = stream_type
-        if bytes_per_unit is not None: self.bytes_per_unit = bytes_per_unit
-        if number_of_units is not None: self.number_of_units = number_of_units
+    def to_bytes(self, data_start: int | None = None, header_size: int = HEADER_SIZE) -> bytes:
+        data_start = self.data_start if data_start is None else data_start
+
+        if header_size < 40:
+            raise ValueError(f"header_size is insufficient ({header_size} < 40)")
+        if data_start < 40:
+            raise ValueError(f"data_start is insufficient ({data_start} < 40)")
+        if data_start < header_size:
+            raise ValueError(f"data_start is insufficient for header_size ({data_start} < {header_size})")
+
+        reserved = bytes(data_start - 40)
+
         return (
             self.magic
             + self.version
-            + self.data_start.to_bytes(8, "little")
+            + data_start.to_bytes(8, "little")
             + self.stream_type.value.to_bytes(8, "little")
             + self.bytes_per_unit.to_bytes(8, "little")
             + self.number_of_units.to_bytes(8, "little")
-            + self.reserved
+            + reserved
         )
 
     @classmethod
@@ -79,6 +86,13 @@ class StreamLocation(Enum):
 class CEBSStream:
     data: list[int] | Iterable[int] | np.ndarray
     stream_type: StreamType | None = None
+
+    def __post_init__(self) -> None:
+        match self.data:
+            case np.ndarray() if self.data.ndim != 1:
+                raise ValueError(f"bad array shape {self.data.shape}, expected 1 dimension")
+            case list() if np.asarray(self.data).ndim != 1:
+                raise ValueError("expected 1d list")
 
     @staticmethod
     def _stream_to_bytes(data: list[int] | Iterable[int] | np.ndarray, stream_type: StreamType | None = None) -> tuple[np.ndarray, StreamType, int, int]:
@@ -224,11 +238,11 @@ class CEBSObject:
 
         payload, stream_type, bytes_per_unit, number_of_units = CEBSStream._stream_to_bytes(self.stream.data, self.stream.stream_type)
 
-        header_bytes = self.header.to_bytes(
-            stream_type=stream_type,
-            bytes_per_unit=bytes_per_unit,
-            number_of_units=number_of_units,
-        )
+        self.header.stream_type = stream_type
+        self.header.bytes_per_unit = bytes_per_unit
+        self.header.number_of_units = number_of_units
+
+        header_bytes = self.header.to_bytes()
 
         return header_bytes + payload.tobytes()
 

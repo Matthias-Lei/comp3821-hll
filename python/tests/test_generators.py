@@ -2,6 +2,8 @@ import numpy as np
 from scipy.stats import poisson
 import hashlib
 
+import pytest
+
 from generator import Generator
 from serialiser import CEBSObject, CEBSStream, Serialiser, StreamLocation
 from cardinality import compute_cardinality
@@ -11,7 +13,7 @@ SEED = 7427369
 POISSON_TAIL_LIMIT = 1e-16
 
 def calculate_poisson_moments(n: int, lambda_: float) -> tuple[float, float]:
-    p: ndarray = poisson.pmf(np.arange(int(poisson.ppf(1 - POISSON_TAIL_LIMIT, lambda_)) + 1), lambda_)
+    p: np.ndarray = poisson.pmf(np.arange(int(poisson.ppf(1 - POISSON_TAIL_LIMIT, lambda_)) + 1), lambda_)
     q: np.ndarray = (1 - p) ** n
 
     expectation = sum(1 - qk for qk in q)
@@ -24,7 +26,7 @@ def calculate_poisson_moments(n: int, lambda_: float) -> tuple[float, float]:
 
     return expectation, variance
 
-def test_poisson_generator(generator: str, nsamples: int, seed: int, lambda_: float) -> None:
+def poisson_generator_test(generator: str, nsamples: int, seed: int, lambda_: float) -> None:
     generator = Generator.get_generator(generator, seed=seed)
     data = generator.generate("poisson", nsamples, lambda_=lambda_)
 
@@ -43,7 +45,7 @@ def test_poisson_generator(generator: str, nsamples: int, seed: int, lambda_: fl
 
 
 
-def test_reproducibility(generator: str, distribution: str, nsamples: int, seed: int, **kwargs) -> None:
+def reproducibility_test(generator: str, distribution: str, nsamples: int, seed: int, **kwargs) -> None:
     data = Generator.get_generator(generator, seed=seed).generate(distribution, nsamples, **kwargs)
     hex1 = hashlib.sha256(CEBSObject(stream=CEBSStream(data)).to_bytes()).hexdigest().upper()
 
@@ -56,17 +58,34 @@ def test_reproducibility(generator: str, distribution: str, nsamples: int, seed:
     print(f"{'Result':<23}{'MATCH' if hex1 == hex2 else 'MISMATCH'}")
 
 
-if __name__ == "__main__":
-    test_poisson_generator("observations", 10 ** 6, seed=SEED, lambda_=10)
-    print()
-    test_poisson_generator("distribution", 10 ** 6, seed=SEED, lambda_=10)
-    print()
-    test_poisson_generator("distribution", 10 ** 7, seed=SEED, lambda_=10)
-    print()
-    test_poisson_generator("distribution", 4 * 10 ** 7, seed=SEED, lambda_=10)
-    print()
 
-    seeds = np.random.default_rng(SEED).integers(0, 2 ** 32, size=10)
-    for seed in seeds:
-        test_reproducibility("observations", "poisson", 10 ** 6, seed=int(seed), lambda_=10)
-        print()
+@pytest.mark.parametrize(("generator", "nsamples"), [
+    ("observations", 10 ** 6),
+    ("distribution", 10 ** 6),
+    ("distribution", 10 ** 7),
+    ("distribution", 4 * 10 ** 7),
+])
+def test_poisson(generator: str, nsamples: int) -> None:
+    poisson_generator_test(generator, nsamples, seed=SEED, lambda_=10)
+
+
+@pytest.mark.parametrize("seed", np.random.default_rng(SEED).integers(0, 2 ** 32, size=10))
+def reproducibility_test_pytest(seed: int) -> None:
+    reproducibility_test("observations", "poisson", 10 ** 6, seed=int(seed), lambda_=10)
+
+
+
+# if __name__ == "__main__":
+#     poisson_generator_test("observations", 10 ** 6, seed=SEED, lambda_=10)
+#     print()
+#     poisson_generator_test("distribution", 10 ** 6, seed=SEED, lambda_=10)
+#     print()
+#     poisson_generator_test("distribution", 10 ** 7, seed=SEED, lambda_=10)
+#     print()
+#     poisson_generator_test("distribution", 4 * 10 ** 7, seed=SEED, lambda_=10)
+#     print()
+
+#     seeds = np.random.default_rng(SEED).integers(0, 2 ** 32, size=10)
+#     for seed in seeds:
+#         reproducibility_test("observations", "poisson", 10 ** 6, seed=int(seed), lambda_=10)
+#         print()
