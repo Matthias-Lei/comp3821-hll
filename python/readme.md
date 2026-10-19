@@ -99,11 +99,26 @@ See [./cebs_spec.md](./cebs_spec.md) for more.
 ### `CEBSStream`
 Dataclass that represents a CEBS stream.
 
-### `StreamDestination`
-Enum of destinations for serialisation.
+### `CEBSObject`
+A `CEBSHeader` with a `CEBSStream` or `CEBSChunkedReader`
+
+### `CEBSChunkedReader`
+Chunked CEBS file reader.
+
+### `StreamType`
+Enum of stream element types.
+
+### `StreamLocation`
+Enum of locations for serialisation/deserialisation.
 
 ### `Serialiser`
-Take a `StreamDestination` and write it to *something* through `write_stream(data, ...)`
+Take a `StreamLocation` and write it to *something* through `write_stream(data, ...)`
+
+
+# cardinality.py
+
+## `compute_cardinality`
+Read a stream from a file or shared memory and return the number of elements and number of distinct elements.
 
 
 # demo.py
@@ -112,4 +127,7 @@ Demonstration of generators and serialisers to the terminal.
 
 # create_test_streams.py
 Creates test streams in `./data/streams`.
+
+# compute_cardinalities.py
+Computes the cardinality of streams in `./data/streams` and writes them to `./data/cardinalities.tsv`.
 

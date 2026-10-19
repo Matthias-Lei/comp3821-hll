@@ -7,8 +7,18 @@ import numpy.typing as npt
 from typing import Optional
 import uuid
 
+import re
+import subprocess
+import sys
+
 PARENT_DIR = Path(__file__).resolve().parent
 LIBGENERATOR_PATH = PARENT_DIR / "bin" / "libgenerator.so"
+
+
+def _hash(data: bytes) -> int:
+    import xxhash
+    return xxhash.xxh64_intdigest(data)
+
 
 
 class Generator(ABC):
@@ -188,22 +198,21 @@ class DistributionGenerator(Generator):
 class ObservationsGenerator(Generator):
     def __init__(self, seed: int = DEFAULT_SEED) -> None:
         self.sampler = DistributionSampler(seed)
+        self.seed = seed
 
     def generate(self, distribution: str, m: int, **params: float) -> npt.NDArray[np.int64]:
-        result = self.sampler.sample(distribution, m, **params)
+        repeats = self.sampler.sample(distribution, m, **params)
+        if repeats.size == 0:
+             return np.empty(0, dtype=np.int64)
+        if repeats.dtype == np.float64:
+            minimum, span = repeats.min(), repeats.max() - repeats.min()
+            repeats = np.ones(m, dtype=np.int64) if span == 0 else np.floor((repeats - minimum) / span * (m - 1)).astype(np.int64) + 1
+        else:
+            repeats = (repeats - repeats.min()).astype(np.int64) + 1
 
-        if result.dtype == np.float64:
-
-            if result.size == 0:
-                return result.astype(np.int64)
-
-            minimum, maximum = result.min(), result.max()
-            if maximum - minimum == 0:
-                result = np.zeros_like(result)
-            else:
-                result = np.floor((result - minimum) / (maximum - minimum) * (m - 1))
-
-        return result.astype(np.int64)
+        result = np.repeat(np.arange(m, dtype=np.int64), repeats)
+        np.random.default_rng([self.seed, 1]).shuffle(result)
+        return result
 
 @Generator.register("uuid")
 class UUIDGenerator(Generator):
@@ -213,4 +222,90 @@ class UUIDGenerator(Generator):
     def generate(self, n: int) -> npt.NDArray[np.void]:
         result = self.rng.bytes(n * 16)
         return np.frombuffer(result, dtype="V16").copy()
+
+
+
+
+
+DEFAULT_SQL_DIRECTORY = PARENT_DIR.parent / "data" / "sql"
+DEFAULT_FETCH_SIZE = 2 ** 24
+
+
+
+
+def _setup_directory(directory: Path, make_directories: bool = False) -> None:
+    if not directory.exists():
+        if not make_directories:
+            if input(f"Create directories to {directory}? (y/N) ").lower() != "y":
+                sys.exit()
+        directory.mkdir(parents=True, exist_ok=True)
+
+
+class SQLGenerator(Generator):
+    directory: Path = DEFAULT_SQL_DIRECTORY
+
+    def __init__(self, make_directories: bool = False) -> None:
+        self.make_directories = make_directories
+        self.connection = None
+        self.repository = None
+
+    def setup(self) -> None:
+        import duckdb
+        _setup_directory(self.directory, self.make_directories)
+        self.connection = duckdb.connect(str(self.directory / self.DATABASE_NAME))
+        self._setup()
+
+    def generate(self, query: str | Path) -> Iterable[npt.NDArray[np.uint64]]:
+        query = query.read_text() if isinstance(query, Path) else query
+        query_result = self.connection.execute(query)
+
+        while batch := query_result.fetchmany(DEFAULT_FETCH_SIZE):
+            yield np.fromiter((_hash(str(row).encode()) for row in batch), dtype=np.uint64, count=len(batch))
+
+
+@Generator.register("sql_job")
+class JOBQueryGenerator(SQLGenerator):
+    DATABASE_NAME = "job.duckdb"
+
+    def _setup(self) -> None:
+        if not self.connection.execute("SHOW TABLES").fetchall():
+            self._setup_database()
+
+        self.repository = self._setup_repository()
+
+    def _setup_database(self) -> None:
+        subprocess.run(["bash", str(PARENT_DIR / "scripts" / "job_setup_database.sh"), "--directory", str(self.directory)], check=True)
+
+        self.connection.begin()
+        self.connection.execute((self.directory / "schema.sql").read_text())
+        self._import_csv()
+        self.connection.commit()
+
+    def _setup_repository(self) -> Path:
+        subprocess.run(["bash", str(PARENT_DIR / "scripts" / "job_setup_repository.sh"), "--directory", str(self.directory)], check=True)
+        return self.directory / "join-order-benchmark"
+
+    def _import_csv(self) -> None:
+        for path in sorted((self.directory / "imdb").rglob("*.csv")):
+            self.connection.execute(f"COPY {path.stem} FROM '{path}' (FORMAT csv, DELIMITER ',', QUOTE '\"', ESCAPE '\\', NULLSTR '', HEADER FALSE)")
+
+
+    def queries(self) -> dict[str, str]:
+        queries = {}
+
+        import re
+
+        for path in sorted(p for p in self.repository.glob("*.sql") if re.fullmatch(r"\d{1,2}[a-z]\.sql", p.name)):
+            query = path.read_text()
+
+            select_list, remainder = query.split("FROM", maxsplit=1)
+            expression = select_list.removeprefix("SELECT").strip() \
+                                    .split(" AS ", maxsplit=1)[0].strip() \
+                                    .removeprefix("MIN(").removesuffix(")")
+            remainder = re.sub(r"\bat\b", '"at"', remainder)
+            expression = re.sub(r"\bat\b", '"at"', expression)
+
+            queries[f"query_{path.stem}"] = f"SELECT {expression} FROM {remainder}"
+
+        return queries
 
