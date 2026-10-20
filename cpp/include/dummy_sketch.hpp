@@ -5,7 +5,7 @@
 class DummySketch : public Sketch {
 public:
         void update(uint64_t x) override;
-        double estimate() const override;
+        std::optional<double> estimate() const override;
         std::size_t memory_bits() const override;
 
 private:
