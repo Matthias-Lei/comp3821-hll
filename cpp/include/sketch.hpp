@@ -18,6 +18,6 @@ public:
         // std::nullopt means the sketch cannot give an estimate (e.g. a full bitmap).
         virtual std::optional<double> estimate() const = 0;
 
-        // TODO: what does this function do
+        // i assume this returns the bits of memory that the algo (sketch) is using
         virtual std::size_t memory_bits() const = 0;
 };
