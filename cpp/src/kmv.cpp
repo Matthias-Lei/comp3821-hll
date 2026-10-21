@@ -38,7 +38,7 @@ std::optional<double> KMinValues::estimate() const {
     double estimateBasic = k / kValHeap.top();
 
     // unbiased basic estimator (equiv to D^UB_k in the paper)
-    double estimateUnbiased = (k + 1) / kValHeap.top();
+    double estimateUnbiased = (k - 1) / kValHeap.top();
 
     return static_cast<double>(estimateUnbiased);
 }
