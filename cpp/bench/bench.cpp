@@ -12,6 +12,7 @@
 #include "dummy_sketch.hpp"
 #include "hash.hpp"
 #include "linear_counting.hpp"
+#include "kmv.hpp"
 
 static std::string g_stream_path;
 static constexpr uint64_t kHashSeed = 1;
@@ -94,6 +95,18 @@ BENCHMARK(BM_LinearCounting)
     ->Arg(65536)
     ->Arg(131072)
     ->Unit(benchmark::kMillisecond);
+
+static void BM_KMinVals(benchmark::State& state)
+{
+    bench_sketch(state, [](std::size_t memory_bits) { return KMinValues(memory_bits); });
+}
+BENCHMARK(BM_KMinVals)
+    ->Arg(8192)
+    ->Arg(32768)
+    ->Arg(65536)
+    ->Arg(131072)
+    ->Unit(benchmark::kMillisecond);
+    
 
 int main(int argc, char** argv)
 {
