@@ -12,6 +12,7 @@
 #include "cebs_stream.hpp"
 #include "dummy_sketch.hpp"
 #include "hash.hpp"
+#include "hyperloglog.hpp"
 #include "linear_counting.hpp"
 
 static std::string g_stream_path;
@@ -101,6 +102,17 @@ static void BM_BloomFilter(benchmark::State& state)
         bench_sketch(state, [](std::size_t memory_bits) { return BloomFilter(memory_bits); });
 }
 BENCHMARK(BM_BloomFilter)
+    ->Arg(8192)
+    ->Arg(32768)
+    ->Arg(65536)
+    ->Arg(131072)
+    ->Unit(benchmark::kMillisecond);
+
+static void BM_HyperLogLog(benchmark::State& state)
+{
+        bench_sketch(state, [](std::size_t memory_bits) { return HyperLogLog(memory_bits); });
+}
+BENCHMARK(BM_HyperLogLog)
     ->Arg(8192)
     ->Arg(32768)
     ->Arg(65536)

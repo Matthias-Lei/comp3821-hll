@@ -5,7 +5,7 @@ import hashlib
 import pytest
 
 from generator import Generator
-from serialiser import CEBSObject, CEBSStream, Serialiser, StreamLocation
+from serialiser import CEBSObject, CEBSStream, Serialiser, StreamLocation, StreamType
 from cardinality import compute_cardinality
 
 SEED = 7427369
@@ -30,7 +30,7 @@ def poisson_generator_test(generator: str, nsamples: int, seed: int, lambda_: fl
     generator = Generator.get_generator(generator, seed=seed)
     data = generator.generate("poisson", nsamples, lambda_=lambda_)
 
-    stream = CEBSObject(stream=CEBSStream(data)).to_bytes()
+    stream = CEBSObject(stream=CEBSStream(data, StreamType.INT64)).to_bytes()
     serialiser = Serialiser()
     sharedmemory, cleanup = serialiser.write_stream(stream, StreamLocation.SHARED_MEMORY)
     elements, cardinality = compute_cardinality(StreamLocation.SHARED_MEMORY, sharedmemory)
@@ -47,10 +47,10 @@ def poisson_generator_test(generator: str, nsamples: int, seed: int, lambda_: fl
 
 def reproducibility_test(generator: str, distribution: str, nsamples: int, seed: int, **kwargs) -> None:
     data = Generator.get_generator(generator, seed=seed).generate(distribution, nsamples, **kwargs)
-    hex1 = hashlib.sha256(CEBSObject(stream=CEBSStream(data)).to_bytes()).hexdigest().upper()
+    hex1 = hashlib.sha256(CEBSObject(stream=CEBSStream(data, StreamType.INT64)).to_bytes()).hexdigest().upper()
 
     data = Generator.get_generator(generator, seed=seed).generate(distribution, nsamples, **kwargs)
-    hex2 = hashlib.sha256(CEBSObject(stream=CEBSStream(data)).to_bytes()).hexdigest().upper()
+    hex2 = hashlib.sha256(CEBSObject(stream=CEBSStream(data, StreamType.INT64)).to_bytes()).hexdigest().upper()
 
     print(f"{'Run 1':<23}{hex1}")
     print(f"{'Run 2':<23}{hex2}")

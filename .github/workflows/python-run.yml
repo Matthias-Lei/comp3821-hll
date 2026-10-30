@@ -15,6 +15,13 @@ jobs:
               with:
                 python-version: "3.13"
 
+            - name: cache data/sql/imdb.tgz
+              uses: actions/cache@v6
+              id: cache
+              with:
+                path: data/sql/imdb.tgz
+                key: imdb-data
+
             - name: Install Python Dependencies
               run: pip install -r python/requirements.txt
 
@@ -22,11 +29,17 @@ jobs:
               run: make -C python
 
             - name: Run create_test_streams.py
-              run: python3 python/create_test_streams.py --make-directories
+              run: python3 -u python/create_test_streams.py --make-directories --remote
 
             - name: Run demo.py
               run: python3 python/demo.py
+              
+            - name: Run compute_cardinalities.py
+              run: python3 python/compute_cardinalities.py
 
             - name: Run pytest
               working-directory: python
               run: PYTHONPATH=. python3 -m pytest -v tests/
+
+            - name: Get size of CEBS artifacts
+              run: ls -lhS data/streams

@@ -6,16 +6,12 @@ from dataclasses import dataclass, field
 from collections.abc import Iterable, Callable, Iterator
 import uuid
 
-import hashlib
-
-def _hash(data: bytes) -> bytes:
-    return hashlib.sha256(data).digest()
-
 class StreamType(Enum):
     UINT64 = 0b00000000
     INT64 = 0b00000001
     FLOAT64 = 0b00000010
     UUID = 0b00001000
+    XXHASH64 = 0b00010000
     INVALID = 0b11111111
 
 HEADER_SIZE = 128
@@ -71,6 +67,7 @@ STREAM_TYPE_MAP = {
     StreamType.INT64: {"np_dtype": np.dtype("int64"), "dtype": np.dtype("<i8"), "bytes_per_unit": 8},
     StreamType.FLOAT64: {"np_dtype": np.dtype("float64"), "dtype": np.dtype("<f8"), "bytes_per_unit": 8},
     StreamType.UUID: {"np_dtype": np.dtype("V16"), "dtype": np.dtype("V16"), "bytes_per_unit": 16},
+    StreamType.XXHASH64: {"np_dtype": np.dtype("uint64"), "dtype": np.dtype("<u8"), "bytes_per_unit": 8},
 }
 
 
@@ -99,8 +96,9 @@ class CEBSStream:
 
         match data:
             case np.ndarray():
-                config = {config["np_dtype"]: (stream_type, config) for stream_type, config in STREAM_TYPE_MAP.items()}[data.dtype]
-                stream_type, config = config
+                if stream_type is None:
+                    raise ValueError("unspecified stream_type")
+                config = STREAM_TYPE_MAP[stream_type]
                 array = data.astype(config["dtype"], copy=False)
 
             case list():
@@ -211,6 +209,8 @@ class CEBSObject:
                     decoded = str(np.frombuffer(chunk, dtype="<f8")[0])
                 case StreamType.UUID:
                     decoded = str(uuid.UUID(bytes=chunk))
+                case StreamType.XXHASH64:
+                    decoded = f"0x{int.from_bytes(chunk, 'little', signed=False):016X}"
                 case _:
                     raise NotImplementedError()
 

@@ -20,7 +20,7 @@ def test_custom_data_start_respected() -> None:
     raw = obj.to_bytes()
 
     assert len(raw) >= 256 + 32, f"header.data_start=256 but file is only {len(raw)} bytes"
-    assert int.from_bytes(raw[256:264], "little") == 1, f"expected first value at offset 256 to be 1, found {first}"
+    assert int.from_bytes(raw[256:264], "little") == 1, f"expected first value at offset 256 to be 1, found {int.from_bytes(raw[256:264], 'little')}"
 
 
 def test_spec_header_conformance() -> None:
