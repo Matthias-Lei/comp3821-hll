@@ -106,7 +106,6 @@ BENCHMARK(BM_KMinVals)
     ->Arg(65536)
     ->Arg(131072)
     ->Unit(benchmark::kMillisecond);
-    
 
 int main(int argc, char** argv)
 {

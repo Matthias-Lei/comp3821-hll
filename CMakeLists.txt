@@ -40,13 +40,9 @@ if(NOT xxhash_POPULATED)
     FetchContent_Populate(xxhash)
 endif()
 
-add_library(sketches cpp/src/dummy_sketch.cpp cpp/src/linear_counting.cpp)
-target_include_directories(sketches
-    PUBLIC  cpp/include ${xxhash_SOURCE_DIR}
-    PRIVATE cpp/external
-)
-
-add_library(sketches cpp/src/dummy_sketch.cpp cpp/src/kmv.cpp)
+add_library(sketches
+    cpp/src/dummy_sketch.cpp cpp/src/linear_counting.cpp
+    cpp/src/dummy_sketch.cpp cpp/src/kmv.cpp)
 target_include_directories(sketches
     PUBLIC  cpp/include ${xxhash_SOURCE_DIR}
     PRIVATE cpp/external
