@@ -8,6 +8,7 @@
 #include <string>
 #include <unordered_set>
 
+#include "bloom_filter.hpp"
 #include "cebs_stream.hpp"
 #include "dummy_sketch.hpp"
 #include "hash.hpp"
@@ -90,6 +91,17 @@ static void BM_LinearCounting(benchmark::State& state)
         bench_sketch(state, [](std::size_t memory_bits) { return LinearCounting(memory_bits); });
 }
 BENCHMARK(BM_LinearCounting)
+    ->Arg(8192)
+    ->Arg(32768)
+    ->Arg(65536)
+    ->Arg(131072)
+    ->Unit(benchmark::kMillisecond);
+
+static void BM_BloomFilter(benchmark::State& state)
+{
+        bench_sketch(state, [](std::size_t memory_bits) { return BloomFilter(memory_bits); });
+}
+BENCHMARK(BM_BloomFilter)
     ->Arg(8192)
     ->Arg(32768)
     ->Arg(65536)

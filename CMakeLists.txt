@@ -40,7 +40,13 @@ if(NOT xxhash_POPULATED)
     FetchContent_Populate(xxhash)
 endif()
 
-add_library(sketches cpp/src/dummy_sketch.cpp cpp/src/hyperloglog.cpp cpp/src/linear_counting.cpp)
+add_library(sketches
+    cpp/src/dummy_sketch.cpp
+    cpp/src/linear_counting.cpp
+    cpp/src/hyperloglog.cpp
+    cpp/src/bloom_filter.cpp
+)
+
 target_include_directories(sketches
     PUBLIC  cpp/include ${xxhash_SOURCE_DIR}
     PRIVATE cpp/external
@@ -51,7 +57,9 @@ target_include_directories(benchmarks PRIVATE cpp/external)
 target_link_libraries(benchmarks PRIVATE sketches benchmark::benchmark)
 
 enable_testing()
-add_executable(test_dummy_sketch cpp/tests/test_dummy_sketch.cpp)
+add_executable(test_dummy_sketch
+    cpp/tests/test_dummy_sketch.cpp
+)
 target_include_directories(test_dummy_sketch PRIVATE cpp/external)
 target_link_libraries(test_dummy_sketch PRIVATE sketches)
 add_test(NAME dummy_sketch COMMAND test_dummy_sketch)
@@ -67,6 +75,10 @@ add_test(NAME hyperloglog COMMAND test_hyperloglog)
 add_executable(test_linear_counting cpp/tests/test_linear_counting.cpp)
 target_link_libraries(test_linear_counting PRIVATE sketches)
 add_test(NAME linear_counting COMMAND test_linear_counting)
+
+add_executable(test_bloom_filter cpp/tests/test_bloom_filter.cpp)
+target_link_libraries(test_bloom_filter PRIVATE sketches)
+add_test(NAME bloom_filter COMMAND test_bloom_filter)
 
 find_program(CCMAKE_EXECUTABLE NAMES ccmake)
 if(CCMAKE_EXECUTABLE)
