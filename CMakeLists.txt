@@ -46,6 +46,12 @@ target_include_directories(sketches
     PRIVATE cpp/external
 )
 
+add_library(sketches cpp/src/dummy_sketch.cpp cpp/src/kmv.cpp)
+target_include_directories(sketches
+    PUBLIC  cpp/include ${xxhash_SOURCE_DIR}
+    PRIVATE cpp/external
+)
+
 add_executable(benchmarks cpp/bench/bench.cpp)
 target_include_directories(benchmarks PRIVATE cpp/external)
 target_link_libraries(benchmarks PRIVATE sketches benchmark::benchmark)
