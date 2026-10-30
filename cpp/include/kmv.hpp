@@ -14,12 +14,16 @@ public:
     size_t memory_bits() const override;
 
     // Bitwise OR of the two bitmaps. Both sketches must have the same m and hash seed.
-    void merge(const KMinValues& other);
+    void merge(KMinValues& other);
 
     bool operator==(const KMinValues& other) const;
 
+    // helper to insert an element already hashed
+    void tryInsertElement(uint64_t hash);
+
 private:
-    // number of values to keep (equiv to k in the KMV paper)
+    // number of bits of memory avaliable -> affects the k value as well
+    size_t m;
     size_t k;
 
     // list of k smallested hashed values (equiv to L in the KMV paper)
