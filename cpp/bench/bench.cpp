@@ -17,35 +17,31 @@
 #include "linear_counting.hpp"
 
 static std::string g_stream_path;
-// static constexpr uint64_t kHashSeed = 1;
+
+// Memory budgets from the proposal (1, 4, 8 and 16 KiB) and the hash seeds of the 64 trials.
 static const std::vector<int64_t> kBudgets = { 8192, 32768, 65536, 131072 };
 static const std::vector<int64_t> kHashSeeds = benchmark::CreateDenseRange(1, 64, 1);
 
+// Each process benchmarks one stream, so its true cardinality is counted once and reused.
 static uint64_t get_true_n(const std::uint64_t* data, std::size_t n)
 {
         static std::optional<uint64_t> cached;
         if (!cached) {
-                std::unordered_set<uint64_t> distinct(data, data+n);
+                std::unordered_set<uint64_t> distinct(data, data + n);
                 cached = distinct.size();
         }
-
         return *cached;
 }
 
-// make(memory_bits) returns a new, empty sketch for that budget.
-template <class MakeSketch>
-static void run_accuracy(benchmark::State& state, const uint64_t* data, std::size_t n,
-    std::size_t memory_bits, std::size_t true_n, MakeSketch make)
+static void record_accuracy(benchmark::State& state, std::size_t memory_bits, uint64_t seed,
+    std::size_t bits_used, uint64_t true_n, std::optional<double> est)
 {
-        auto sketch = make(memory_bits);
-        for (std::size_t i = 0; i < n; ++i)
-                sketch.update(hash64(data[i], kHashSeed));
-
         state.counters["true_n"] = benchmark::Counter(static_cast<double>(true_n));
         state.counters["bits"] = benchmark::Counter(static_cast<double>(memory_bits));
+        state.counters["bits_used"] = benchmark::Counter(static_cast<double>(bits_used));
+        state.counters["seed"] = benchmark::Counter(static_cast<double>(seed));
 
         // A sketch with no estimate (e.g. a full bitmap) reports saturated = 1 and no error.
-        const std::optional<double> est = sketch.estimate();
         state.counters["saturated"] = benchmark::Counter(est ? 0.0 : 1.0);
         if (!est)
                 return;
@@ -56,11 +52,13 @@ static void run_accuracy(benchmark::State& state, const uint64_t* data, std::siz
         state.counters["rel_err"] = benchmark::Counter(rel_err);
 }
 
-// Times building the sketch over the whole stream, then records its accuracy.
+// Times building the sketch over the whole stream with the run's hash seed (the second
+// argument), then records the estimate. make(memory_bits) returns a new, empty sketch.
 template <class MakeSketch>
 static void bench_sketch(benchmark::State& state, MakeSketch make)
 {
         const std::size_t memory_bits = static_cast<std::size_t>(state.range(0));
+        const uint64_t seed = static_cast<uint64_t>(state.range(1));
 
         CebsStream stream(g_stream_path);
         const std::uint64_t* data = stream.data();
@@ -72,60 +70,58 @@ static void bench_sketch(benchmark::State& state, MakeSketch make)
                 sink ^= data[i];
         (void)sink;
 
+        std::optional<double> est;
+        std::size_t bits_used = 0;
         for (auto _ : state) {
                 auto sketch = make(memory_bits);
                 for (std::size_t i = 0; i < n; ++i)
-                        sketch.update(hash64(data[i], kHashSeed));
-                std::optional<double> est = sketch.estimate();
+                        sketch.update(hash64(data[i], seed));
+                est = sketch.estimate();
+                bits_used = sketch.memory_bits();
                 benchmark::DoNotOptimize(est);
         }
 
-        run_accuracy(state, data, n, memory_bits, true_n, make);
+        record_accuracy(state, memory_bits, seed, bits_used, true_n, est);
 }
+
+// Registers a sketch benchmark for every memory budget and hash seed, one pass per run, so each
+// run's time is a single cold pass. JSON names look like
+// BM_LinearCounting/bits:8192/seed:7/iterations:1. bench_sketch reads both arguments, so every
+// sketch must be registered with this macro rather than ->Arg(budget).
+#define SKETCH_BENCHMARK(function)                                                              \
+        BENCHMARK(function)                                                                     \
+            ->ArgsProduct({ kBudgets, kHashSeeds })                                             \
+            ->ArgNames({ "bits", "seed" })                                                      \
+            ->Iterations(1)                                                                     \
+            ->Unit(benchmark::kMillisecond)
 
 static void BM_DummySketch(benchmark::State& state)
 {
         bench_sketch(state, [](std::size_t) { return DummySketch(); });
 }
+// The exact counter gives the same answer for every hash seed, so it runs with seed 1 only.
 BENCHMARK(BM_DummySketch)
-    ->Arg(8192)
-    ->Arg(32768)
-    ->Arg(65536)
-    ->Arg(131072)
+    ->ArgsProduct({ kBudgets, { 1 } })
+    ->ArgNames({ "bits", "seed" })
     ->Unit(benchmark::kMillisecond);
 
 static void BM_LinearCounting(benchmark::State& state)
 {
         bench_sketch(state, [](std::size_t memory_bits) { return LinearCounting(memory_bits); });
 }
-BENCHMARK(BM_LinearCounting)
-    ->Arg(8192)
-    ->Arg(32768)
-    ->Arg(65536)
-    ->Arg(131072)
-    ->Unit(benchmark::kMillisecond);
+SKETCH_BENCHMARK(BM_LinearCounting);
 
 static void BM_BloomFilter(benchmark::State& state)
 {
         bench_sketch(state, [](std::size_t memory_bits) { return BloomFilter(memory_bits); });
 }
-BENCHMARK(BM_BloomFilter)
-    ->Arg(8192)
-    ->Arg(32768)
-    ->Arg(65536)
-    ->Arg(131072)
-    ->Unit(benchmark::kMillisecond);
+SKETCH_BENCHMARK(BM_BloomFilter);
 
 static void BM_HyperLogLog(benchmark::State& state)
 {
         bench_sketch(state, [](std::size_t memory_bits) { return HyperLogLog(memory_bits); });
 }
-BENCHMARK(BM_HyperLogLog)
-    ->Arg(8192)
-    ->Arg(32768)
-    ->Arg(65536)
-    ->Arg(131072)
-    ->Unit(benchmark::kMillisecond);
+SKETCH_BENCHMARK(BM_HyperLogLog);
 
 int main(int argc, char** argv)
 {
