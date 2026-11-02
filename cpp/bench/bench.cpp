@@ -7,6 +7,7 @@
 #include <optional>
 #include <string>
 #include <unordered_set>
+#include <vector>
 
 #include "bloom_filter.hpp"
 #include "cebs_stream.hpp"
@@ -16,12 +17,19 @@
 #include "linear_counting.hpp"
 
 static std::string g_stream_path;
-static constexpr uint64_t kHashSeed = 1;
+// static constexpr uint64_t kHashSeed = 1;
+static const std::vector<int64_t> kBudgets = { 8192, 32768, 65536, 131072 };
+static const std::vector<int64_t> kHashSeeds = benchmark::CreateDenseRange(1, 64, 1);
 
 static uint64_t get_true_n(const std::uint64_t* data, std::size_t n)
 {
-        std::unordered_set<uint64_t> distinct(data, data + n);
-        return distinct.size();
+        static std::optional<uint64_t> cached;
+        if (!cached) {
+                std::unordered_set<uint64_t> distinct(data, data+n);
+                cached = distinct.size();
+        }
+
+        return *cached;
 }
 
 // make(memory_bits) returns a new, empty sketch for that budget.
