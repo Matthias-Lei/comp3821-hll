@@ -163,11 +163,11 @@ ExactTest exactTestBinArbK(streamDirectory + BINOMIAL_DATA, false, 1280);
 ExactTest exactTestBern(streamDirectory + BERNOULLI_DATA, false);
 ExactTest exactTestNorm(streamDirectory + NORMAL_DATA, false);
 
-MergeTest mergeTestNormBern(streamDirectory + NORMAL_DATA, BERNOULLI_DATA, true);
-MergeTest mergeTestNormBin(streamDirectory + NORMAL_DATA, BINOMIAL_DATA, true);
-MergeTest mergeTestNormChi(streamDirectory + NORMAL_DATA, CHI_SQUARED_DATA, true);
-MergeTest mergeTestNormBeta(streamDirectory + NORMAL_DATA, BETA_DATA, true);
-MergeTest mergeTestBinBern(streamDirectory + BINOMIAL_DATA, BERNOULLI_DATA, true);
+MergeTest mergeTestNormBern(streamDirectory + NORMAL_DATA, streamDirectory + BERNOULLI_DATA, true);
+MergeTest mergeTestNormBin(streamDirectory + NORMAL_DATA, streamDirectory + BINOMIAL_DATA, true);
+MergeTest mergeTestNormChi(streamDirectory + NORMAL_DATA, streamDirectory + CHI_SQUARED_DATA, true);
+MergeTest mergeTestNormBeta(streamDirectory + NORMAL_DATA, streamDirectory + BETA_DATA, true);
+MergeTest mergeTestBinBern(streamDirectory + BINOMIAL_DATA, streamDirectory + BERNOULLI_DATA, true);
 
 std::vector<TestGroup> testGroups = {
     TestGroup("Estimate is Unbiased")
