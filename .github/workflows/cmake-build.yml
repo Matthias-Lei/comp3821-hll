@@ -16,5 +16,8 @@ jobs:
             - name: Build
               run: cmake --build build
 
+            - name: Run create_test_streams.py
+              run: python3 -u python/create_test_streams.py --make-directories --remote
+
             - name: Test
               run: ctest --test-dir build --output-on-failure
