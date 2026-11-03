@@ -86,6 +86,6 @@ std::size_t KMinValues::memory_bits() const {
     return (
         sizeof(kValHeap) * BITS_TO_BYTE
         + sizeof(kValSet) * BITS_TO_BYTE
-        + sizeof(size_t) // size of k
+        + sizeof(k) * BITS_TO_BYTE // size of k
     );
 }
