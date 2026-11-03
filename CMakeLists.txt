@@ -66,6 +66,11 @@ add_executable(test_linear_counting cpp/tests/test_linear_counting.cpp)
 target_link_libraries(test_linear_counting PRIVATE sketches)
 add_test(NAME linear_counting COMMAND test_linear_counting)
 
+add_executable(test_kmv cpp/tests/test_kmv.cpp)
+target_link_libraries(test_kmv PRIVATE sketches)
+target_include_directories(test_kmv PRIVATE cpp/external)
+add_test(NAME kmv COMMAND test_kmv)
+
 find_program(CCMAKE_EXECUTABLE NAMES ccmake)
 if(CCMAKE_EXECUTABLE)
     add_custom_target(ccmake

@@ -37,13 +37,18 @@ void KMinValues::tryInsertElement(uint64_t hash) {
 }
 
 void KMinValues::update(uint64_t x) {
-    std::uint64_t v = hash64(x, 0);
+    std::uint64_t v = hash64(x, SEED);
     // std::cout << "hashed value: " << v << std::endl;
 
     tryInsertElement(v);
 }
 
 std::optional<double> KMinValues::estimate() const {
+    // std::cout << "K is :" << k << std::endl;
+    
+    // override for n < k
+    if (kValSet.size() < k) return kValSet.size();
+
     // note: multiply by max of uint64 as the hash value has to be normalised
     uint64_t hash = kValHeap.top();
 
@@ -65,9 +70,9 @@ std::optional<double> KMinValues::estimate() const {
 // std::unordered_set<uint64_t> kValSet;
 
 void KMinValues::merge(KMinValues& other) {
-    if (k != other.k) {
-        throw std::invalid_argument("KMinValues: cannot merge sketches of different k");
-    }
+    // if (k != other.k) {
+    //     throw std::invalid_argument("KMinValues: cannot merge sketches of different k");
+    // }
 
     while (!other.kValHeap.empty()) {
         uint64_t hash = other.kValHeap.top();

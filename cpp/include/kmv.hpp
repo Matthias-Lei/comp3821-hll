@@ -7,7 +7,7 @@
 // k minimum values
 class KMinValues : public Sketch {
 public:
-    explicit KMinValues(size_t k);
+    explicit KMinValues(size_t m);
 
     void update(uint64_t h) override;
     std::optional<double> estimate() const override;

@@ -19,8 +19,8 @@ static constexpr uint64_t kHashSeed = 1;
 
 static uint64_t get_true_n(const std::uint64_t* data, std::size_t n)
 {
-        std::unordered_set<uint64_t> distinct(data, data + n);
-        return distinct.size();
+    std::unordered_set<uint64_t> distinct(data, data + n);
+    return distinct.size();
 }
 
 // make(memory_bits) returns a new, empty sketch for that budget.
