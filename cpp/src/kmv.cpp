@@ -36,16 +36,14 @@ void KMinValues::tryInsertElement(uint64_t hash) {
     }
 }
 
+// NOTE: x is an already hashed value
 void KMinValues::update(uint64_t x) {
-    std::uint64_t v = hash64(x, SEED);
-    // std::cout << "hashed value: " << v << std::endl;
-
-    tryInsertElement(v);
+    tryInsertElement(x);
 }
 
 std::optional<double> KMinValues::estimate() const {
     // std::cout << "K is :" << k << std::endl;
-    
+
     // override for n < k
     if (kValSet.size() < k) return kValSet.size();
 

@@ -146,7 +146,12 @@ class MergeTest : public Test {
 namespace fs = std::filesystem;
 // get location of root directory
 fs::path source_file_path(__FILE__);
-std::string streamDirectory = source_file_path.parent_path().parent_path().parent_path().string();
+std::string streamDirectory = source_file_path
+    .parent_path()
+    .parent_path()
+    .parent_path()
+    .parent_path()
+    .string();
 
 MonteCarloTest monteCarloNormal(streamDirectory + NORMAL_DATA, false);
 MonteCarloTest monteCarloBinomial(streamDirectory + BINOMIAL_DATA, false);
