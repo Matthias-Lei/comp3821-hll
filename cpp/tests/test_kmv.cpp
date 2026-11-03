@@ -4,13 +4,15 @@
 #include "cebs_stream.hpp"
 #include <iostream>
 #include <vector>
+#include <filesystem>
+#include <fstream>
 
 // cebs paths
-#define BERNOULLI_DATA "data/streams/bernoulli_observations_seed7427369.cebs"
-#define NORMAL_DATA "data/streams/normal_observations_seed7427369.cebs"
-#define BETA_DATA "data/streams/beta_observations_seed7427369.cebs"
-#define BINOMIAL_DATA "data/streams/binomial_observations_seed7427369.cebs"
-#define CHI_SQUARED_DATA "data/streams/chi_squared_observations_seed7427369.cebs"
+#define BERNOULLI_DATA "/data/streams/bernoulli_observations_seed7427369.cebs"
+#define NORMAL_DATA "/data/streams/normal_observations_seed7427369.cebs"
+#define BETA_DATA "/data/streams/beta_observations_seed7427369.cebs"
+#define BINOMIAL_DATA "/data/streams/binomial_observations_seed7427369.cebs"
+#define CHI_SQUARED_DATA "/data/streams/chi_squared_observations_seed7427369.cebs"
 
 
 // builds a kmv sketch
@@ -141,30 +143,35 @@ class MergeTest : public Test {
 
 
 // ===============================================================================================
-MonteCarloTest monteCarloNormal(NORMAL_DATA, false);
-MonteCarloTest monteCarloBinomial(BINOMIAL_DATA, false);
-MonteCarloTest monteCarloBern(BERNOULLI_DATA, false);
-MonteCarloTest monteCarloChi(CHI_SQUARED_DATA, false);
-MonteCarloTest monteCarloBeta(BETA_DATA, false);
+namespace fs = std::filesystem;
+// get location of root directory
+fs::path source_file_path(__FILE__);
+std::string streamDirectory = source_file_path.parent_path().parent_path().parent_path().string();
 
-ExactTest exactTestBin(BINOMIAL_DATA, false);
-ExactTest exactTestBinArbK(BINOMIAL_DATA, false, 1280);
-ExactTest exactTestBern(BERNOULLI_DATA, false);
-ExactTest exactTestNorm(NORMAL_DATA, false);
+MonteCarloTest monteCarloNormal(streamDirectory + NORMAL_DATA, false);
+MonteCarloTest monteCarloBinomial(streamDirectory + BINOMIAL_DATA, false);
+MonteCarloTest monteCarloBern(streamDirectory + BERNOULLI_DATA, false);
+MonteCarloTest monteCarloChi(streamDirectory + CHI_SQUARED_DATA, false);
+MonteCarloTest monteCarloBeta(streamDirectory + BETA_DATA, false);
 
-MergeTest mergeTestNormBern(NORMAL_DATA, BERNOULLI_DATA, true);
-MergeTest mergeTestNormBin(NORMAL_DATA, BINOMIAL_DATA, true);
-MergeTest mergeTestNormChi(NORMAL_DATA, CHI_SQUARED_DATA, true);
-MergeTest mergeTestNormBeta(NORMAL_DATA, BETA_DATA, true);
-MergeTest mergeTestBinBern(BINOMIAL_DATA, BERNOULLI_DATA, true);
+ExactTest exactTestBin(streamDirectory + BINOMIAL_DATA, false);
+ExactTest exactTestBinArbK(streamDirectory + BINOMIAL_DATA, false, 1280);
+ExactTest exactTestBern(streamDirectory + BERNOULLI_DATA, false);
+ExactTest exactTestNorm(streamDirectory + NORMAL_DATA, false);
+
+MergeTest mergeTestNormBern(streamDirectory + NORMAL_DATA, BERNOULLI_DATA, true);
+MergeTest mergeTestNormBin(streamDirectory + NORMAL_DATA, BINOMIAL_DATA, true);
+MergeTest mergeTestNormChi(streamDirectory + NORMAL_DATA, CHI_SQUARED_DATA, true);
+MergeTest mergeTestNormBeta(streamDirectory + NORMAL_DATA, BETA_DATA, true);
+MergeTest mergeTestBinBern(streamDirectory + BINOMIAL_DATA, BERNOULLI_DATA, true);
 
 std::vector<TestGroup> testGroups = {
     TestGroup("Estimate is Unbiased")
-        // .addTest(&monteCarloNormal)
-        // .addTest(&monteCarloBinomial)
-        // .addTest(&monteCarloChi)
-        // .addTest(&monteCarloBeta)
-        // .addTest(&monteCarloBern)
+        .addTest(&monteCarloNormal)
+        .addTest(&monteCarloBinomial)
+        .addTest(&monteCarloChi)
+        .addTest(&monteCarloBeta)
+        .addTest(&monteCarloBern)
     , TestGroup("Estimate is Exact for n < k")
         .addTest(&exactTestBin)
         .addTest(&exactTestBinArbK)
@@ -177,8 +184,15 @@ std::vector<TestGroup> testGroups = {
         .addTest(&mergeTestNormBeta)
         .addTest(&mergeTestBinBern)
 };
+
+
 int main() {
+    std::cout << streamDirectory + NORMAL_DATA << std::endl;
+    std::cout << "Current working directory: " << fs::current_path() << '\n';
+
     for (TestGroup testGroup : testGroups) {
         testGroup.run();
     }
+
+    return 0;
 }
