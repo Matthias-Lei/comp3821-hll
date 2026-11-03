@@ -150,7 +150,6 @@ std::string streamDirectory = source_file_path
     .parent_path()
     .parent_path()
     .parent_path()
-    .parent_path()
     .string();
 
 MonteCarloTest monteCarloNormal(streamDirectory + NORMAL_DATA, false);
