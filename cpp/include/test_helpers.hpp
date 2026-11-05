@@ -4,6 +4,7 @@
 #include <cebs_stream.hpp>
 #include <functional>
 #include <unordered_set>
+#include <cmath>
 
 // defines
 #define DEFAULT_SEED 0
@@ -36,6 +37,47 @@ uint64_t getDistinctElements(const uint64_t* data, uint64_t n) {
 // convert c-style array to cpp vector
 std::vector<uint64_t> arrayToVector(const std::uint64_t* data, uint64_t n) {
     return std::vector<uint64_t>(data, data + n);
+}
+
+// get mean of vector
+double getMean(std::vector<double> estimates) {
+    double sum = 0;
+    for (double estimate : estimates) sum += estimate;
+
+    return sum / estimates.size();
+}
+
+// gets the sample std, with degree of freedom n - 1
+double getStd(std::vector<double> estimates, std::optional<double> _mean = NULL) {
+    double mean;
+    if (_mean) mean = *_mean;
+    else mean = getMean(estimates);
+
+    double deltaSquared = 0;
+    for (double estimate : estimates) deltaSquared += (estimate - mean) * (estimate - mean);
+
+    // std::cout << "delta squared: " << deltaSquared << std::endl;
+    // std::cout << "estimate size: " << estimates.size() << std::endl;
+
+    return std::sqrt(deltaSquared / (estimates.size() - 1));
+}
+
+// get the students t statistic
+double getTStatistic(
+    std::vector<double> estimates,
+    double hypothesisedMean,
+    std::optional<double> _mean = NULL,
+    std::optional<double> _std = NULL
+) {
+    double mean;
+    if (_mean) mean = *_mean;
+    else mean = getMean(estimates);
+
+    double std;
+    if (_std) std = *_std;
+    else std = getStd(estimates, mean);
+
+    return (mean - hypothesisedMean) * std::sqrt(estimates.size()) / std;
 }
 
 // when making a new test, extend this object
