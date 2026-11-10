@@ -38,9 +38,9 @@ private:
 
         unsigned index_bits_;
         std::size_t register_count_;
-        std::vector<std::uint8_t> entries_;
-        std::vector<std::uint32_t> pending_;
-        std::size_t pending_count_ = 0;
-        std::vector<std::uint8_t> registers_;
+        std::vector<std::uint8_t> compressed_sparse_;
+        std::vector<std::uint32_t> sparse_buffer_;
+        std::size_t sparse_buffer_count_ = 0;
+        std::vector<std::uint8_t> dense_registers_;
         bool sparse_ = true;
 };

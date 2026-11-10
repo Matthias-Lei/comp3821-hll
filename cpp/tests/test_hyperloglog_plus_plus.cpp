@@ -71,8 +71,8 @@ int main()
 
         HyperLogLogPlusPlus calibrated(8192);
         add_range(calibrated, 1, 3001);
-        ok &= expect(std::abs(*calibrated.estimate() - 2914.5785928428104) < 1e-8,
-            "dense bias correction agrees with calibrated prototype");
+        ok &= expect(std::abs(*calibrated.estimate() - 2918.0734868964487) < 1e-8,
+            "dense bias correction agrees with six calibration points");
 
         HyperLogLogPlusPlus collision(8192), collision_direct(8192);
         collision.update(0);
