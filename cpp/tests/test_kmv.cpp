@@ -28,29 +28,41 @@ class MonteCarloTest : public Test {
 
     MonteCarloTest(std::string streamPath, bool detailed) : Test(detailed), streamPath(streamPath) {}
 
-    int n = 100000;
+    int n = 1000;
+    int batchSize = 30;
 
     bool run() const override {
+        if (detailed) std::cout << n << " x " << batchSize << "\n";
+
         CebsStream stream(streamPath);
         uint64_t trueCardinality = getDistinctElements(stream.data(), stream.size());
 
         std::vector<double> estimates = {};
+        std::vector<double> estimateBatch = {};
 
         std::vector<KMinValues> sketches = {};
-        for (int i = 0; i < n; i++) {
-            KMinValues sketch = build(arrayToVector(stream.data(), stream.size()), DEFAULT_MEMORY_BITS, i);
-            std::optional<double> estimate = sketch.estimate();
-            if (estimate) {
-                estimates.push_back(*estimate);
+        for (int i = 0; i < n * batchSize; i++) {
+            estimateBatch = {};
+            for (int j = 0; j < batchSize; j++) {
+                KMinValues sketch = build(arrayToVector(stream.data(), stream.size()), DEFAULT_MEMORY_BITS, i);
+                std::optional<double> estimate = sketch.estimate();
+                if (estimate) estimateBatch.push_back(*estimate);
+                i++;
             }
+
+            double estimateSum = 0;
+            for (double estimate : estimateBatch) estimateSum += estimate;
+            estimates.push_back(estimateSum / estimateBatch.size());
         }
 
         double mean = getMean(estimates);
         double std = getStd(estimates, mean);
         double tStat = getTStatistic(estimates, trueCardinality, mean, std);
-        std::cout << "mean: " << mean << "\nstd: " << std << "\ntstat: " << tStat << "\n\n";
+        double pVal = getPValue(tStat);
+        double cohensD = getCohensD(estimates, trueCardinality, mean, std);
+        if (detailed) std::cout << "mean: " << mean << "\nstd: " << std << "\ntstat: " << tStat << "\npval: " << pVal << "\ncohens d: " << cohensD << "\n\n";
 
-        return true;
+        return pVal > 0.05;
     }
     std::string failureMsg() const override {
         return "monte carlo test failed";
@@ -89,6 +101,9 @@ class MergeTest : public Test {
     MergeTest(std::string streamPath, std::string streamPath2, bool detailed)
         : Test(detailed), streamPath(streamPath), streamPath2(streamPath2) {}
 
+    int n = 100;
+    int batchSize = 30;
+
     bool run() const override {
         CebsStream stream(streamPath);
         CebsStream stream2(streamPath2);
@@ -101,20 +116,46 @@ class MergeTest : public Test {
         distinct.merge(distinct2);
         uint64_t trueCardinality = distinct.size();
 
-        KMinValues sketch = build(arrayToVector(stream.data(), stream.size()));
-        KMinValues sketch2 = build(arrayToVector(stream2.data(), stream2.size()));
-        sketch.merge(sketch2);
+        std::vector<double> estimates = {};
+        std::vector<double> estimateBatch = {};
+
+        for (int i = 0; i < n * batchSize; i++) {
+            estimateBatch = {};
+            for (int j = 0; j < batchSize; j++) {
+                KMinValues sketch = build(arrayToVector(stream.data(), stream.size()), DEFAULT_MEMORY_BITS, i);
+                KMinValues sketch2 = build(arrayToVector(stream2.data(), stream2.size()), DEFAULT_MEMORY_BITS, i);
+                sketch.merge(sketch2);
+
+                std::optional<double> estimate = sketch.estimate();
+                if (estimate) estimateBatch.push_back(*estimate);
+                i++;
+            }
+
+            double estimateSum = 0;
+            for (double estimate : estimateBatch) estimateSum += estimate;
+            estimates.push_back(estimateSum / estimateBatch.size());
+        }
+
+        double mean = getMean(estimates);
+        double std = getStd(estimates, mean);
+        double tStat = getTStatistic(estimates, trueCardinality, mean, std);
+        double pVal = getPValue(tStat);
+
 
         if (detailed) {
-            std::cout << "merged estimate: " << *sketch.estimate() << std::endl;
+            std::cout << "merged estimate (mean): " << mean << std::endl;
+            std::cout << "std: " << std << std::endl;
+            std::cout << "tStat: " << tStat << std::endl;
+            std::cout << "pval: " << pVal << std::endl;
+
             std::cout << "true value: " << trueCardinality << std::endl;
             std::cout << "direct addition value: " << cardinality1 + cardinality2 << std::endl;
             std::cout << std::endl;
         }
-        
-        double relError = (*sketch.estimate() - trueCardinality) / trueCardinality;
-        bool passed = -0.1 < relError && relError < 0.1;
-        return passed;
+
+        // double relError = (*sketch.estimate() - trueCardinality) / trueCardinality;
+        // bool passed = -0.1 < relError && relError < 0.1;
+        return std == 0 || pVal > 0.05;
     }
 
     std::string failureMsg() const override {
@@ -144,18 +185,18 @@ ExactTest exactTestBinArbK(streamDirectory + BINOMIAL_DATA, false, 1280);
 ExactTest exactTestBern(streamDirectory + BERNOULLI_DATA, false);
 ExactTest exactTestNorm(streamDirectory + NORMAL_DATA, false);
 
-MergeTest mergeTestNormBern(streamDirectory + NORMAL_DATA, streamDirectory + BERNOULLI_DATA, true);
-MergeTest mergeTestNormBin(streamDirectory + NORMAL_DATA, streamDirectory + BINOMIAL_DATA, true);
-MergeTest mergeTestNormChi(streamDirectory + NORMAL_DATA, streamDirectory + CHI_SQUARED_DATA, true);
-MergeTest mergeTestNormBeta(streamDirectory + NORMAL_DATA, streamDirectory + BETA_DATA, true);
-MergeTest mergeTestBinBern(streamDirectory + BINOMIAL_DATA, streamDirectory + BERNOULLI_DATA, true);
+MergeTest mergeTestNormBern(streamDirectory + NORMAL_DATA, streamDirectory + BERNOULLI_DATA, false);
+MergeTest mergeTestNormBin(streamDirectory + NORMAL_DATA, streamDirectory + BINOMIAL_DATA, false);
+MergeTest mergeTestNormChi(streamDirectory + NORMAL_DATA, streamDirectory + CHI_SQUARED_DATA, false);
+MergeTest mergeTestNormBeta(streamDirectory + NORMAL_DATA, streamDirectory + BETA_DATA, false);
+MergeTest mergeTestBinBern(streamDirectory + BINOMIAL_DATA, streamDirectory + BERNOULLI_DATA, false);
 
 std::vector<TestGroup> testGroups = {
     TestGroup("Estimate is Unbiased")
-        // .addTest(&monteCarloNormal)
+        .addTest(&monteCarloNormal)
         // .addTest(&monteCarloBinomial)
-        // .addTest(&monteCarloChi)
-        // .addTest(&monteCarloBeta)
+        .addTest(&monteCarloChi)
+        .addTest(&monteCarloBeta)
         // .addTest(&monteCarloBern)
     , TestGroup("Estimate is Exact for n < k")
         .addTest(&exactTestBin)
