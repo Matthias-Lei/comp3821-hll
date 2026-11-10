@@ -44,6 +44,7 @@ add_library(sketches
     cpp/src/dummy_sketch.cpp
     cpp/src/linear_counting.cpp
     cpp/src/hyperloglog.cpp
+    cpp/src/hyperloglog_plus_plus.cpp
     cpp/src/bloom_filter.cpp
 )
 
@@ -71,6 +72,10 @@ add_test(NAME hash COMMAND test_hash)
 add_executable(test_hyperloglog cpp/tests/test_hyperloglog.cpp)
 target_link_libraries(test_hyperloglog PRIVATE sketches)
 add_test(NAME hyperloglog COMMAND test_hyperloglog)
+
+add_executable(test_hyperloglog_plus_plus cpp/tests/test_hyperloglog_plus_plus.cpp)
+target_link_libraries(test_hyperloglog_plus_plus PRIVATE sketches)
+add_test(NAME hyperloglog_plus_plus COMMAND test_hyperloglog_plus_plus)
 
 add_executable(test_linear_counting cpp/tests/test_linear_counting.cpp)
 target_link_libraries(test_linear_counting PRIVATE sketches)

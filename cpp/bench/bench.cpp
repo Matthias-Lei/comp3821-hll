@@ -13,6 +13,7 @@
 #include "dummy_sketch.hpp"
 #include "hash.hpp"
 #include "hyperloglog.hpp"
+#include "hyperloglog_plus_plus.hpp"
 #include "linear_counting.hpp"
 
 static std::string g_stream_path;
@@ -35,6 +36,10 @@ static void run_accuracy(benchmark::State& state, const uint64_t* data, std::siz
 
         state.counters["true_n"] = benchmark::Counter(static_cast<double>(true_n));
         state.counters["bits"] = benchmark::Counter(static_cast<double>(memory_bits));
+        if constexpr (requires { sketch.storage_bytes(); }) {
+                state.counters["payload_bytes"]
+                    = benchmark::Counter(static_cast<double>(sketch.storage_bytes()));
+        }
 
         // A sketch with no estimate (e.g. a full bitmap) reports saturated = 1 and no error.
         const std::optional<double> est = sketch.estimate();
@@ -113,6 +118,18 @@ static void BM_HyperLogLog(benchmark::State& state)
         bench_sketch(state, [](std::size_t memory_bits) { return HyperLogLog(memory_bits); });
 }
 BENCHMARK(BM_HyperLogLog)
+    ->Arg(8192)
+    ->Arg(32768)
+    ->Arg(65536)
+    ->Arg(131072)
+    ->Unit(benchmark::kMillisecond);
+
+static void BM_HyperLogLogPlusPlus(benchmark::State& state)
+{
+        bench_sketch(
+            state, [](std::size_t memory_bits) { return HyperLogLogPlusPlus(memory_bits); });
+}
+BENCHMARK(BM_HyperLogLogPlusPlus)
     ->Arg(8192)
     ->Arg(32768)
     ->Arg(65536)
