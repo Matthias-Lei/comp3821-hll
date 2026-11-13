@@ -27,13 +27,13 @@ if __name__ == "__main__":
     distribution_generator = Generator.get_generator("distribution", seed=SEED)
     for distribution in DistributionSampler.supported_distributions():
         result = distribution_generator.generate(distribution, 20)
-        stream = CEBSObject(stream=CEBSStream(result))
+        stream = CEBSObject(stream=CEBSStream(result, StreamType.FLOAT64 if DistributionSampler.SUPPORTED_DISTRIBUTIONS[distribution]["format"].__name__ == "float64" else StreamType.INT64))
         print(f"{distribution}:\n{stream}")
 
     observation_generator = Generator.get_generator("observations", seed=SEED)
     for distribution in DistributionSampler.supported_distributions():
         result = observation_generator.generate(distribution, 20)
-        stream = CEBSObject(stream=CEBSStream(result))
+        stream = CEBSObject(stream=CEBSStream(result, StreamType.INT64))
         print(f"{distribution}:\n{stream}")
 
     uuid_generator = Generator.get_generator("uuid", seed=SEED)
@@ -45,15 +45,15 @@ if __name__ == "__main__":
     BASE_DIR = Path(__file__).resolve().parent.parent
     CEBS_INPUT_DIR = BASE_DIR / "data" / "streams"
 
+    print(f"{'stream':<61} {'cardinality':>12} {'elements':>12}")
     for file in sorted(file for file in CEBS_INPUT_DIR.glob("*.cebs") if file.is_file()):
-        print(f"computing cardinality of {file.relative_to(BASE_DIR)}...")
         elements, cardinality = compute_cardinality(StreamLocation.TEMP_FILE, file)
-        print(f"cardinality: {cardinality}, elements: {elements}")
-        print("")
+        print(f"{file.name:<61} {cardinality:>12,} {elements:>12,}")
+    print("")
 
 
     data = observation_generator.generate("poisson", 10 ** 6, lambda_=10)
-    stream = CEBSObject(stream=CEBSStream(data)).to_bytes()
+    stream = CEBSObject(stream=CEBSStream(data, StreamType.INT64)).to_bytes()
     serialiser = Serialiser()
     sharedmemory, cleanup = serialiser.write_stream(stream, StreamLocation.SHARED_MEMORY)
 
