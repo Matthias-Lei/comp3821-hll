@@ -56,10 +56,10 @@ Run the benchmark against one of the generated .cebs files using Google Benchmar
 ```
 e.g.
 ```
-./build/benchmarks data/streams/bernoulli_observations_seed7427369.cebs --benchmark_format=json
+./build/benchmarks data/streams/bernoulli_observations_seed7427369_m1000.cebs --benchmark_format=json
 ```
 
-Streams are generated in data/streams/ and follow the naming convention name_seed{N}.cebs (or range_python.cebs). The data/ directory is gitignored.
+Streams are generated in data/streams/ and follow the naming convention name_seed{N}_m{M}.cebs (or range_python.cebs). The data/ directory is gitignored.
 
 ## Shared hash
 
