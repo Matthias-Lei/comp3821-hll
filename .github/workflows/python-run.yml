@@ -22,6 +22,24 @@ jobs:
                 path: data/sql/imdb.tgz
                 key: imdb-data
 
+            - name: cache data/sql/policing/ripa_2021.zip
+              uses: actions/cache@v6
+              with:
+                path: data/sql/policing/ripa_2021.zip
+                key: policing-data
+
+            - name: cache data/sql/lichess/puzzles.csv.zst
+              uses: actions/cache@v6
+              with:
+                path: data/sql/lichess/puzzles.csv.zst
+                key: lichess-data
+
+            - name: cache data/sql/weather
+              uses: actions/cache@v6
+              with:
+                path: data/sql/weather
+                key: weather-data
+
             - name: Install Python Dependencies
               run: pip install -r python/requirements.txt
 
