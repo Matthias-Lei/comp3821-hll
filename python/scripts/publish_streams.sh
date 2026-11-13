@@ -11,6 +11,7 @@ GIT_EMAIL="meow@example.com"
 sudo apt-get update
 sudo apt-get install -y rsync git-lfs
 
+tmux split-window -d -h htop
 
 cd python
 python3 -m venv .venv
@@ -27,11 +28,6 @@ df /workspaces -h
 ls -lhS data/streams
 
 
-unset GITHUB_TOKEN
-gh auth login
-gh repo list --limit 4
-gh auth setup-git
-
 git clone "$REPO_URL" "$REPO_DIR"
 cd "$REPO_DIR"
 
@@ -44,6 +40,12 @@ rsync -a -P --exclude="*_m10000.cebs" "$STREAMS_DIR"/ "$REPO_DIR"/data/streams/
 rsync -a "$CARDINALITY_FILE" data/
 rsync -a "$CARDINALITY_FILE" "$REPO_DIR"/data/
 tree "$REPO_DIR"
+
+
+unset GITHUB_TOKEN
+gh auth login
+gh repo list --limit 4
+gh auth setup-git
 
 cd "$REPO_DIR"
 git add .
