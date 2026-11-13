@@ -210,12 +210,7 @@ static void BM_KMinVals(benchmark::State& state)
 {
         bench_sketch(state, [](std::size_t memory_bits) { return KMinValues(memory_bits); });
 }
-BENCHMARK(BM_KMinVals)
-    ->Arg(8192)
-    ->Arg(32768)
-    ->Arg(65536)
-    ->Arg(131072)
-    ->Unit(benchmark::kMillisecond);
+SKETCH_BENCHMARK(BM_KMinVals);
 
 int main(int argc, char** argv)
 {
