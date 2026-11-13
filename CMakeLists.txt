@@ -45,6 +45,7 @@ add_library(sketches
     cpp/src/linear_counting.cpp
     cpp/src/hyperloglog.cpp
     cpp/src/bloom_filter.cpp
+    cpp/src/kmv.cpp
 )
 
 target_include_directories(sketches
@@ -75,6 +76,11 @@ add_test(NAME hyperloglog COMMAND test_hyperloglog)
 add_executable(test_linear_counting cpp/tests/test_linear_counting.cpp)
 target_link_libraries(test_linear_counting PRIVATE sketches)
 add_test(NAME linear_counting COMMAND test_linear_counting)
+
+add_executable(test_kmv cpp/tests/test_kmv.cpp)
+target_link_libraries(test_kmv PRIVATE sketches)
+target_include_directories(test_kmv PRIVATE cpp/external)
+add_test(NAME kmv COMMAND test_kmv)
 
 add_executable(test_bloom_filter cpp/tests/test_bloom_filter.cpp)
 target_link_libraries(test_bloom_filter PRIVATE sketches)

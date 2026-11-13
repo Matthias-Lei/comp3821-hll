@@ -14,6 +14,7 @@
 #include "dummy_sketch.hpp"
 #include "hash.hpp"
 #include "hyperloglog.hpp"
+#include "kmv.hpp"
 #include "linear_counting.hpp"
 
 static std::string g_stream_path;
@@ -101,8 +102,10 @@ static const StreamSplit& get_split(const std::uint64_t* data, std::size_t n)
         if (!cached) {
                 StreamSplit split;
                 for (std::size_t i = 0; i < n; ++i)
-                        (hash64(data[i], kSplitSeed) & 1 ? split.right : split.left).push_back(data[i]);
-                split.left_n = std::unordered_set<uint64_t>(split.left.begin(), split.left.end()).size();
+                        (hash64(data[i], kSplitSeed) & 1 ? split.right : split.left)
+                            .push_back(data[i]);
+                split.left_n
+                    = std::unordered_set<uint64_t>(split.left.begin(), split.left.end()).size();
                 split.right_n
                     = std::unordered_set<uint64_t>(split.right.begin(), split.right.end()).size();
                 cached = std::move(split);
@@ -154,11 +157,11 @@ static void bench_merge(benchmark::State& state, MakeSketch make)
 // run's time is a single cold pass. JSON names look like
 // BM_LinearCounting/bits:8192/seed:7/iterations:1. bench_sketch reads both arguments, so every
 // sketch must be registered with this macro rather than ->Arg(budget).
-#define SKETCH_BENCHMARK(function)                                                              \
-        BENCHMARK(function)                                                                     \
-            ->ArgsProduct({ kBudgets, kHashSeeds })                                             \
-            ->ArgNames({ "bits", "seed" })                                                      \
-            ->Iterations(1)                                                                     \
+#define SKETCH_BENCHMARK(function)                                                                 \
+        BENCHMARK(function)                                                                        \
+            ->ArgsProduct({ kBudgets, kHashSeeds })                                                \
+            ->ArgNames({ "bits", "seed" })                                                         \
+            ->Iterations(1)                                                                        \
             ->Unit(benchmark::kMillisecond)
 
 static void BM_DummySketch(benchmark::State& state)
@@ -202,6 +205,17 @@ static void BM_HyperLogLogMerge(benchmark::State& state)
         bench_merge(state, [](std::size_t memory_bits) { return HyperLogLog(memory_bits); });
 }
 SKETCH_BENCHMARK(BM_HyperLogLogMerge);
+
+static void BM_KMinVals(benchmark::State& state)
+{
+        bench_sketch(state, [](std::size_t memory_bits) { return KMinValues(memory_bits); });
+}
+BENCHMARK(BM_KMinVals)
+    ->Arg(8192)
+    ->Arg(32768)
+    ->Arg(65536)
+    ->Arg(131072)
+    ->Unit(benchmark::kMillisecond);
 
 int main(int argc, char** argv)
 {
