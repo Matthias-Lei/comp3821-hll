@@ -13,8 +13,8 @@ public:
     std::optional<double> estimate() const override;
     size_t memory_bits() const override;
 
-    // Bitwise OR of the two bitmaps. Both sketches must have the same m and hash seed.
-    void merge(KMinValues& other);
+    // Union of the k smallest hashes. Both sketches must have the same k and hash seed.
+    void merge(const KMinValues& other);
 
     bool operator==(const KMinValues& other) const;
 

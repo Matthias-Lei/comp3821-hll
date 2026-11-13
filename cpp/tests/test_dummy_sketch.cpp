@@ -1,17 +1,21 @@
 #include "cebs_stream.hpp"
 #include "dummy_sketch.hpp"
-#include <cassert>
+#include "test_helpers.hpp"
+
+#include <cstddef>
 #include <cstdint>
 #include <cstring>
 #include <fstream>
-#include <iostream>
 #include <optional>
+#include <span>
 #include <string>
 #include <vector>
 
-static const std::string kPath = "/tmp/test_dummy_stream.cebs";
+namespace {
 
-static void write_cebs(const std::string& path, const std::vector<std::uint64_t>& data)
+const std::string kPath = "/tmp/test_dummy_stream.cebs";
+
+void write_cebs(const std::string& path, const std::vector<std::uint64_t>& data)
 {
         const std::uint64_t data_start = 128;
         const std::uint64_t stream_type = 0x00; // uint64
@@ -32,22 +36,28 @@ static void write_cebs(const std::string& path, const std::vector<std::uint64_t>
             static_cast<std::streamsize>(data.size() * sizeof(std::uint64_t)));
 }
 
-int main()
+void test_distinct_values(sketch_test::Context& context)
 {
-        write_cebs(kPath, { 10, 20, 10, 30, 20 });
+        const std::vector<std::uint64_t> values { 10, 20, 10, 30, 20 };
+        write_cebs(kPath, values);
 
-        CebsStream stream(kPath);
+        const CebsStream stream(kPath);
         DummySketch sketch;
         for (std::size_t i = 0; i < stream.size(); ++i)
                 sketch.update(stream.data()[i]);
 
-        const std::optional<double> est = sketch.estimate();
-        if (est != 3.0) {
-                std::cerr << "test failed: expected 3.0, got "
-                          << (est ? std::to_string(*est) : "no estimate") << "\n";
-                return 1;
-        }
+        const std::optional<double> estimate = sketch.estimate();
+        context.expect(estimate == 3.0, "dummy sketch counts the distinct values");
+}
 
-        std::cout << "test_dummy_sketch passed\n";
-        return 0;
+} // namespace
+
+int main(int argc, char** argv)
+{
+        std::vector<sketch_test::TestGroup> groups;
+
+        groups.emplace_back("Dummy Sketch").add("distinct values", test_distinct_values);
+
+        return sketch_test::run_all(
+            argc, argv, std::span<const sketch_test::TestGroup>(groups));
 }
