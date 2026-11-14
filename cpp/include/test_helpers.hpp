@@ -40,7 +40,7 @@ std::vector<uint64_t> arrayToVector(const std::uint64_t* data, uint64_t n) {
 }
 
 // get mean of vector
-double getMean(std::vector<double> estimates) {
+double getMean(std::vector<double>& estimates) {
     double sum = 0;
     for (double estimate : estimates) sum += estimate;
 
@@ -48,7 +48,7 @@ double getMean(std::vector<double> estimates) {
 }
 
 // gets the sample std, with degree of freedom n - 1
-double getStd(std::vector<double> estimates, std::optional<double> _mean = NULL) {
+double getStd(std::vector<double>& estimates, std::optional<double> _mean = NULL) {
     double mean;
     if (_mean) mean = *_mean;
     else mean = getMean(estimates);
@@ -64,7 +64,7 @@ double getStd(std::vector<double> estimates, std::optional<double> _mean = NULL)
 
 // get the t statistic
 double getTStatistic(
-    std::vector<double> estimates,
+    std::vector<double>& estimates,
     double hypothesisedMean,
     std::optional<double> _mean = NULL,
     std::optional<double> _std = NULL
@@ -94,7 +94,7 @@ double getPValue(
 
 // get cohen's d for single group
 double getCohensD(
-    std::vector<double> estimates,
+    std::vector<double>& estimates,
     double hypothesisedMean,
     std::optional<double> _mean = NULL,
     std::optional<double> _std = NULL
@@ -108,6 +108,26 @@ double getCohensD(
     else std = getStd(estimates, mean);
 
     return (mean - hypothesisedMean) / std;
+}
+
+// get root mean squared error
+double getRMSE(
+    std::vector<double>& estimates,
+    std::optional<double> _mean = NULL
+) {
+    double mean;
+    if (_mean) mean = *_mean;
+    else mean = getMean(estimates);
+
+    double sum = 0;
+    int count = 0;
+    for (double estimate : estimates) {
+        count++;
+        sum += (estimate - mean) * (estimate - mean);
+    }
+    sum /= count;
+
+    return std::sqrt(sum);
 }
 
 // when making a new test, extend this object

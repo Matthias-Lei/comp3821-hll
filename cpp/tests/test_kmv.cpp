@@ -72,9 +72,10 @@ public:
                 double tStat = getTStatistic(estimates, trueCardinality, mean, std);
                 double pVal = getPValue(tStat);
                 double cohensD = getCohensD(estimates, trueCardinality, mean, std);
+                double rmse = getRMSE(estimates, mean);
                 if (detailed)
                         std::cout << "mean: " << mean << "\nstd: " << std << "\ntstat: " << tStat
-                                  << "\npval: " << pVal << "\ncohens d: " << cohensD << "\n\n";
+                                  << "\npval: " << pVal << "\ncohens d: " << cohensD << "\nrmse: " << rmse << "\n\n";
 
                 return pVal > 0.05;
         }
@@ -205,11 +206,11 @@ namespace fs = std::filesystem;
 fs::path source_file_path(__FILE__);
 std::string streamDirectory = source_file_path.parent_path().parent_path().parent_path().string();
 
-MonteCarloTest monteCarloNormal(streamDirectory + NORMAL_DATA, false);
-MonteCarloTest monteCarloBinomial(streamDirectory + BINOMIAL_DATA, false);
-MonteCarloTest monteCarloBern(streamDirectory + BERNOULLI_DATA, false);
-MonteCarloTest monteCarloChi(streamDirectory + CHI_SQUARED_DATA, false);
-MonteCarloTest monteCarloBeta(streamDirectory + BETA_DATA, false);
+MonteCarloTest monteCarloNormal(streamDirectory + NORMAL_DATA, true);
+MonteCarloTest monteCarloBinomial(streamDirectory + BINOMIAL_DATA, true);
+MonteCarloTest monteCarloBern(streamDirectory + BERNOULLI_DATA, true);
+MonteCarloTest monteCarloChi(streamDirectory + CHI_SQUARED_DATA, true);
+MonteCarloTest monteCarloBeta(streamDirectory + BETA_DATA, true);
 
 ExactTest exactTestBin(streamDirectory + BINOMIAL_DATA, false);
 ExactTest exactTestBinArbK(streamDirectory + BINOMIAL_DATA, false, 1280);
