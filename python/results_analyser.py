@@ -10,6 +10,15 @@ relative errors, the storage actually used, the number of saturated trials and t
 pass. It compares each sketch with its theoretical prediction within the range of n where the
 formula applies, and reports how well merged sketches of two disjoint parts of a stream do.
 It writes data/analysis/summary.csv and data/analysis/summary.md.
+
+data/ is in .gitignore. The full run's raw JSON (results/raw/all-results.tar.gz, 905 streams x
+5 sketches x 4 budgets x 64 seeds) and this script's output for it (results/analysis/) are in
+the data repo, https://github.com/Matthias-Lei/comp3821-hll-data, on the branch
+sid-linear-counting-results. plot_linear_counting.py's docstring lists the folder and the
+summary's columns. To analyse that run again:
+
+    tar -xzf all-results.tar.gz
+    python3 python/results_analyser.py --results all-results --output data/analysis-all
 """
 import argparse
 import csv
