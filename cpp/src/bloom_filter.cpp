@@ -41,6 +41,21 @@ std::optional<double> BloomFilter::estimate() const
         return estimate;
 }
 
+void BloomFilter::merge(const BloomFilter& other)
+{
+        if (m_ != other.m_ || k_ != other.k_) {
+                throw std::invalid_argument(
+                    "BloomFilter: cannot merge sketches with different m or k");
+        }
+        for (std::size_t i = 0; i < bits_.size(); ++i)
+                bits_[i] |= other.bits_[i];
+}
+
+bool BloomFilter::operator==(const BloomFilter& other) const
+{
+        return m_ == other.m_ && k_ == other.k_ && bits_ == other.bits_;
+}
+
 std::size_t BloomFilter::memory_bits() const
 {
         return m_;
