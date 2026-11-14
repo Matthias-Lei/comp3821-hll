@@ -19,6 +19,12 @@ BloomFilter build(std::span<const std::uint64_t> values, std::size_t m = kBits)
         return sketch_test::build_sketch<BloomFilter>(values, m, kSeed);
 }
 
+void test_bias(sketch_test::Context& context)
+{
+        const std::vector<std::uint64_t> values = sketch_test::range(0, 1000);
+        sketch_test::expect_no_bias<BloomFilter>(context, values, kBits, 1000.0);
+}
+
 // If we pass 0..99 to update(), the double hashing sets exactly 100 bits.
 // The estimate must equal -(m/k) ln((m - 100) / m) exactly.
 void test_formula(sketch_test::Context& context)
@@ -94,6 +100,7 @@ int main(int argc, char** argv)
 
         groups.emplace_back("Bloom Filter")
             .add("formula", test_formula)
+            .add("bias", test_bias)
             .add("small streams", test_exact_on_small_streams)
             .add("repeats", test_repeats_do_not_change_state)
             .add("reordering", test_reordering_does_not_change_state)

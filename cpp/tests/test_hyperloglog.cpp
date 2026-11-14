@@ -29,6 +29,14 @@ std::vector<std::uint64_t> distinct_keys(std::size_t count)
         return keys;
 }
 
+// At n = 1000 and r = 1024 this exercises the small-range path.
+void test_bias(sketch_test::Context& context)
+{
+        const std::vector<std::uint64_t> values = sketch_test::range(0, 1000);
+        sketch_test::expect_no_bias<HyperLogLog>(
+            context, values, kDefaultBudgetBits, 1000.0);
+}
+
 void test_register_counts(sketch_test::Context& context)
 {
         const std::vector<std::uint64_t> empty;
@@ -122,6 +130,7 @@ int main(int argc, char** argv)
 
         groups.emplace_back("HyperLogLog")
             .add("register counts", test_register_counts)
+            .add("bias", test_bias)
             .add("small counts", test_small_counts)
             .add("repeats and order", test_repeats_and_order)
             .add("merge", test_merge);

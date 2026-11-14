@@ -21,6 +21,12 @@ LinearCounting build(std::span<const std::uint64_t> values, std::size_t m = kBit
         return sketch_test::build_sketch<LinearCounting>(values, m, kSeed);
 }
 
+void test_bias(sketch_test::Context& context)
+{
+        const std::vector<std::uint64_t> values = sketch_test::range(0, 1000);
+        sketch_test::expect_no_bias<LinearCounting>(context, values, kBits, 1000.0);
+}
+
 // With bits 0..n-1 set, the estimate must equal -m ln((m - n) / m) exactly.
 void test_formula(sketch_test::Context& context)
 {
@@ -209,6 +215,7 @@ int main(int argc, char** argv)
 
         groups.emplace_back("Linear Counting")
             .add("formula", test_formula)
+            .add("bias", test_bias)
             .add("small streams", test_exact_on_small_streams)
             .add("different sketches differ", test_different_sketches_are_not_equal)
             .add("repeats", test_repeats_do_not_change_state)

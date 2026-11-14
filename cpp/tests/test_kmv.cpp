@@ -17,8 +17,6 @@ namespace {
 
 constexpr std::size_t kMemoryBits = 8192;
 constexpr std::uint64_t kSeed = 1;
-constexpr std::size_t kTrials = 1000;
-constexpr double kAlpha = 0.05;
 
 void expect_exact_estimate(
     sketch_test::Context& context, std::span<const std::uint64_t> values, std::size_t memory_bits)
@@ -38,18 +36,8 @@ void expect_unbiased_on_stream(sketch_test::Context& context, std::string_view f
         const std::span<const std::uint64_t> values(stream.data(), stream.size());
         const std::uint64_t truth = sketch_test::distinct_count(values);
 
-        const sketch_test::MonteCarlo samples
-            = sketch_test::monte_carlo<KMinValues>(values, kMemoryBits, kTrials);
-        if (!context.expect(samples.saturated == 0, "KMV must never return nullopt"))
-                return;
-
-        const sketch_test::Summary summary = sketch_test::summarize(samples.estimates);
-        const double p = sketch_test::two_sided_p_value(
-            sketch_test::t_statistic(summary, static_cast<double>(truth)));
-
-        context.note("mean=" + std::to_string(summary.mean) + " sd=" + std::to_string(summary.sd)
-            + " p=" + std::to_string(p));
-        context.expect(p > kAlpha, "mean estimate is consistent with the true cardinality");
+        sketch_test::expect_no_bias<KMinValues>(
+            context, values, kMemoryBits, static_cast<double>(truth));
 }
 
 void expect_merge_properties(sketch_test::Context& context)

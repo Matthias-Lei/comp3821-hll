@@ -16,10 +16,9 @@
 //     }
 //
 // Statistical tests use summarize()/t_statistic()/two_sided_p_value(). The p-value uses
-// the normal approximation to Student's t: with n independent trials, df = n - 1. Tests
-// that use it must use at least 200 trials at alpha = 1e-3 (the t and normal critical
-// values differ by about 1.5% at df = 199 and 0.3% at df = 999). If more statistical
-// tests are added, use a Bonferroni-corrected alpha.
+// the normal approximation to Student's t: with n independent trials, df = n - 1. Bias
+// tests use T = 1000 trials and a per-test alpha of 0.05; no multiple-testing correction
+// is applied. All implemented sketches use the same expect_no_bias() helper.
 
 #include <cmath>
 #include <cstddef>
@@ -44,6 +43,8 @@ namespace sketch_test {
 
 inline constexpr std::size_t kDefaultMemoryBits = 8192;
 inline constexpr std::uint64_t kDefaultSeed = 0;
+inline constexpr std::size_t kDefaultBiasTrials = 1000;
+inline constexpr double kDefaultBiasAlpha = 0.05;
 
 // ============================================================================
 // test runner
@@ -382,6 +383,25 @@ MonteCarlo monte_carlo(std::span<const std::uint64_t> values, std::size_t memory
                         result.estimates.push_back(*estimate);
         }
         return result;
+}
+
+// Two-sided bias test used by every sketch. Runs T independently seeded trials, requires
+// no saturated trials, and passes when the two-sided p-value is above alpha.
+template <class SketchType>
+void expect_no_bias(Context& context, std::span<const std::uint64_t> values,
+    std::size_t memory_bits, double truth, std::size_t trials = kDefaultBiasTrials,
+    double alpha = kDefaultBiasAlpha)
+{
+        const MonteCarlo samples = monte_carlo<SketchType>(values, memory_bits, trials);
+        if (!context.expect(samples.saturated == 0, "bias test has no saturated trials"))
+                return;
+
+        const Summary summary = summarize(samples.estimates);
+        const double p = two_sided_p_value(t_statistic(summary, truth));
+
+        context.note("mean=" + std::to_string(summary.mean)
+            + " sd=" + std::to_string(summary.sd) + " p=" + std::to_string(p));
+        context.expect(p > alpha, "mean estimate is consistent with the true cardinality");
 }
 
 // ============================================================================
