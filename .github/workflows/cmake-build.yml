@@ -10,11 +10,32 @@ jobs:
             - name: Checkout
               uses: actions/checkout@v7
 
+            - name: Install Python
+              uses: actions/setup-python@v7
+              with:
+                python-version: "3.13"
+
+            - name: cache data/sql/imdb.tgz
+              uses: actions/cache@v6
+              id: cache
+              with:
+                path: data/sql/imdb.tgz
+                key: imdb-data
+
+            - name: Install Python Dependencies
+              run: pip install -r python/requirements.txt
+
+            - name: Run Make
+              run: make -C python
+              
             - name: Configure
               run: cmake -S . -B build
 
             - name: Build
               run: cmake --build build
+
+            - name: Run create_test_streams.py
+              run: python3 -u python/create_test_streams.py --make-directories --remote
 
             - name: Test
               run: ctest --test-dir build --output-on-failure
