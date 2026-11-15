@@ -129,7 +129,7 @@ def test_rmse_figure_draws_groups_where_the_theory_is_not_judged(tmp_path: Path)
 def test_draw_sketch_writes_every_figure_and_the_key_numbers(tmp_path: Path, name: str) -> None:
     spec = SPECS[name]
     paths = draw_sketch(made_up_rows(name), spec, tmp_path)
-    figures = ["rmse_vs_theory", "bias", "by_distribution"] + (["saturation"] if spec.hashes else [])
+    figures = ["rmse_vs_theory", "relative_rmse_by_budget", "bias", "by_distribution"] + (["saturation"] if spec.hashes else [])
     expected = {f"{spec.short}_{figure}.{suffix}" for figure in figures for suffix in ("pdf", "png")}
     assert {path.name for path in paths} == expected | {f"{spec.short}_key_numbers.md"}
     assert all(path.stat().st_size > 0 for path in paths)

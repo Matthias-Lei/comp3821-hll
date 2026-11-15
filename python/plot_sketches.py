@@ -40,6 +40,7 @@ matplotlib.use("Agg")  # draw to files only: WSL and CI have no display
 import matplotlib.pyplot as plt  # noqa: E402
 from matplotlib.lines import Line2D  # noqa: E402
 from matplotlib.patches import Patch  # noqa: E402
+from matplotlib.ticker import FuncFormatter  # noqa: E402
 
 from plot_results import (  # noqa: E402
     AXIS,
@@ -88,6 +89,11 @@ SHOWN_KINDS = ("observations", "sql")  # the kinds the per-sketch figures draw
 # (validated as an ordinal ramp).
 BUDGET_COLOURS = dict(zip(BUDGETS, ("#86b6ef", "#3987e5", "#1c5cab", "#0d366b")))
 MARK_DASH = (0, (4, 3))
+# Relative RMSE axes run from 0.01% to 100% of n. HyperLogLog++'s sparse mode is near exact (down
+# to 1e-5 %), which would squash the range where the sketches differ, so anything under the
+# floor goes on the bottom edge with the exact results, and anything saturated on the top edge.
+PERCENT_FLOOR, PERCENT_CEILING = 0.01, 100.0
+EDGE_STEP = 0.035  # each series' row of edge markers sits this far (axes fraction) from the last
 SATURATION_WINDOW = (0.5, 2.0)  # the saturation figure covers n from 0.5 to 2 times its saturation n
 REGION_FILL = "#f0efea"  # a step off the surface: marks a region without competing with data
 
@@ -217,6 +223,39 @@ def load_rows(path: Path, sketches: tuple[str, ...] | None = None, kinds: tuple[
                 "mean_time_ms": optional_float(row.get("mean_time_ms")),
             })
     return rows
+
+
+def by_n(rows: list[dict], sketch: str, bits: int) -> list[dict]:
+    """The sketch's rows at one budget on the observations streams, one per n (n > 0), sorted.
+    Every observations stream with the same n gives the same result, so the first is kept."""
+    found: dict[int, dict] = {}
+    for row in rows:
+        if row["sketch"] == sketch and row["bits"] == bits and row["kind"] == "observations" and row["true_n"] > 0:
+            found.setdefault(row["true_n"], row)
+    return [found[n] for n in sorted(found)]
+
+
+def state(row: dict) -> str:
+    """'saturated' (no estimate), 'exact' (RMSE 0) or 'measured'."""
+    if row["saturated"] > 0 or row["rmse"] is None:
+        return "saturated"
+    return "exact" if row["rmse"] == 0 else "measured"
+
+
+def percent_of_n(value: float | None, row: dict | None) -> float | None:
+    return None if value is None or row is None else 100 * value / row["true_n"]
+
+
+def edge(row: dict | None) -> str | None:
+    """Where a row goes on a relative RMSE axis: 'top' (saturated, or over PERCENT_CEILING),
+    'bottom' (exact or under PERCENT_FLOOR), or None (drawn as a point; also None for no row)."""
+    if row is None:
+        return None
+    if state(row) == "saturated" or percent_of_n(row["rmse"], row) >= PERCENT_CEILING:
+        return "top"
+    if state(row) == "exact" or percent_of_n(row["rmse"], row) < PERCENT_FLOOR:
+        return "bottom"
+    return None
 
 
 def judged(rows: list[dict], spec: SketchSpec, kinds: tuple[str, ...]) -> dict[int, list[dict]]:
@@ -383,6 +422,65 @@ def plot_bias(rows: list[dict], spec: SketchSpec, stem: Path) -> list[Path]:
         return finish(fig, {**handles, **region_handles(spec)}, stem)
 
 
+def decade_percent(value: float, _position: int) -> str:
+    """Labels log-axis ticks as percentages at powers of ten only."""
+    return f"{value:g}%" if value > 0 and math.isclose(math.log10(value), round(math.log10(value)), abs_tol=1e-9) else ""
+
+
+def percent_axis(ax: plt.Axes) -> None:
+    """A log axis of relative RMSE from PERCENT_FLOOR to PERCENT_CEILING, labelled by decade."""
+    ax.set_yscale("log")
+    ax.set_ylim(PERCENT_FLOOR, PERCENT_CEILING)
+    ax.yaxis.set_major_formatter(FuncFormatter(decade_percent))
+    ax.yaxis.set_minor_formatter(FuncFormatter(lambda *_: ""))
+
+
+def plot_relative_rmse_by_budget(rows: list[dict], spec: SketchSpec, stem: Path) -> list[Path]:
+    """Relative RMSE against n with every budget on one axis: the measured points (95% CI, one
+    observations stream per n) and the predicted curve in the budget's colour. Saturated groups
+    sit on the top edge, exact ones (or under PERCENT_FLOOR) on the bottom edge."""
+    series = {bits: by_n(rows, spec.name, bits) for bits in BUDGETS}
+    if not any(series.values()):
+        return []
+    all_n = [row["true_n"] for points in series.values() for row in points]
+    with plt.rc_context(FIGURE_STYLE):
+        fig, ax = plt.subplots(figsize=(9, 5.4))
+        ax.set_xscale("log")
+        percent_axis(ax)
+        ax.axvspan(min(all_n) / 1.5, MIN_JUDGED_N, color=REGION_FILL, linewidth=0, zorder=0)
+        handles: dict[str, object] = {}
+        transform = ax.get_xaxis_transform()
+        for index, bits in enumerate(BUDGETS):
+            colour = BUDGET_COLOURS[bits]
+            ns, curve = predicted_rmse_curve(spec, bits, min(all_n), max(all_n))
+            ax.plot(ns, [100 * rmse / n for n, rmse in zip(ns, curve)], color=colour, linewidth=1.2, linestyle=MARK_DASH)
+            points = [row for row in series[bits] if edge(row) is None]
+            relative = [percent_of_n(row["rmse"], row) for row in points]
+            ax.errorbar([row["true_n"] for row in points], relative,
+                        yerr=log_error_bars(relative, [percent_of_n(row["rmse_low"], row) for row in points],
+                                            [percent_of_n(row["rmse_high"], row) for row in points]),
+                        fmt="o-", color=colour, markersize=4.5, linewidth=1.2, elinewidth=0.8, capsize=0,
+                        markeredgecolor=SURFACE, markeredgewidth=0.6)
+            for where, y in (("top", 1 - EDGE_STEP * (index + 0.5)), ("bottom", EDGE_STEP * (index + 0.5))):
+                xs = [row["true_n"] for row in series[bits] if edge(row) == where]
+                if xs:
+                    ax.plot(xs, [y] * len(xs), "o", color=colour, markersize=5, markerfacecolor=SURFACE,
+                            markeredgewidth=1.2, transform=transform, clip_on=False)
+            handles[f"{bits // BITS_PER_KIB} KiB (m = {bits:,} bits)"] = Line2D([], [], color=colour, marker="o", linewidth=1.2)
+        hollow = {"linestyle": "none", "marker": "o", "markersize": 6, "color": INK_MUTED, "markerfacecolor": SURFACE}
+        handles[f"dashed: predicted, {spec.theory_label}"] = Line2D([], [], color=INK_MUTED, linewidth=1.2, linestyle=MARK_DASH)
+        handles["hollow, top edge: a seed saturated (no estimate)"] = Line2D([], [], **hollow)
+        handles[f"hollow, bottom edge: RMSE 0 or under {PERCENT_FLOOR:g}% of n"] = Line2D([], [], **hollow)
+        handles[f"shaded: n < {MIN_JUDGED_N}, not judged"] = Patch(color=REGION_FILL)
+        ax.set_xlabel("true number of distinct values, n")
+        ax.set_ylabel("relative RMSE, % of n (95% CI)")
+        ax.set_title(f"{spec.label}: relative RMSE against n at each memory budget (64 hash seeds per point)",
+                     loc="left", color=INK, fontsize=11, pad=72)
+        ax.legend(list(handles.values()), list(handles.keys()), loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2)
+        fig.tight_layout()
+        return save(fig, stem)
+
+
 def saturation_label(hashes: int) -> str:
     return "predicted, exp(-m e^(-n/m))" if hashes == 1 else f"predicted, exp(-m e^(-{hashes}n/m))"
 
@@ -524,6 +622,7 @@ def draw_sketch(rows: list[dict], spec: SketchSpec, output: Path) -> list[Path]:
     """Every figure and the key numbers of one sketch, in output/, named <short>_<figure>."""
     written = [
         *plot_rmse_vs_theory(rows, spec, output / f"{spec.short}_rmse_vs_theory"),
+        *plot_relative_rmse_by_budget(rows, spec, output / f"{spec.short}_relative_rmse_by_budget"),
         *plot_bias(rows, spec, output / f"{spec.short}_bias"),
         *plot_saturation(rows, spec, output / f"{spec.short}_saturation"),
         *plot_by_distribution(rows, spec, output / f"{spec.short}_by_distribution"),

@@ -46,20 +46,28 @@ from matplotlib.patches import Patch  # noqa: E402
 from matplotlib.ticker import FuncFormatter, NullLocator  # noqa: E402
 
 from plot_results import AXIS, BITS_PER_KIB, BUDGETS, INK, INK_MUTED, INK_SECONDARY, SURFACE, save  # noqa: E402
-from plot_sketches import (  # noqa: E402
+from plot_sketches import (  # noqa: E402, F401 (by_n, state and the percent limits are used by the tests)
     BUDGET_COLOURS,
     DEFAULT_OUTPUT_DIR,
     DEFAULT_SUMMARY,
+    EDGE_STEP,
     FIGURE_STYLE,
     KIND_STYLE,
     MARK_DASH,
     MIN_JUDGED_N,
+    PERCENT_CEILING,
+    PERCENT_FLOOR,
     RATIO_BAND,
     REGION_FILL,
     SPECS,
+    by_n,
+    edge,
     first_saturated_n,
     has_prediction,
     load_rows,
+    percent_axis,
+    percent_of_n,
+    state,
 )
 from results_analyser import MERGE_SUFFIX, hyperloglog_registers  # noqa: E402
 
@@ -82,11 +90,6 @@ SKETCH_STYLE = {
     "HyperLogLogPlusPlus": {"color": REGISTERS, "marker": "v", "linestyle": "--", "label": "HyperLogLog++"},
 }
 SKETCHES = tuple(SKETCH_STYLE)
-EDGE_STEP = 0.035  # each sketch's row of edge markers sits this far (axes fraction) from the last
-# Relative RMSE axes run from 0.01% to 100% of n. HyperLogLog++'s sparse mode is near exact (down
-# to 1e-5 %), which would squash the range where the sketches differ, so anything under the
-# floor goes on the bottom edge with the exact results.
-PERCENT_FLOOR, PERCENT_CEILING = 0.01, 100.0
 RATIO_TICKS = (0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2)
 TIME_DODGE = 0.06  # sketches at the same budget sit 2^(±0.06 i) apart so their ranges do not overlap
 SATURATED_LABEL = f"hollow, top edge: a seed saturated (no estimate), or RMSE over {PERCENT_CEILING:g}% of n"
@@ -95,29 +98,8 @@ EXACT_LABEL = f"hollow, bottom edge: RMSE 0 or under {PERCENT_FLOOR:g}% of n (ne
 
 # --- Selecting ------------------------------------------------------------------------------
 
-def by_n(rows: list[dict], sketch: str, bits: int) -> list[dict]:
-    """The sketch's rows at one budget on the observations streams, one per n (n > 0), sorted.
-    Every observations stream with the same n gives the same result, so the first is kept."""
-    found: dict[int, dict] = {}
-    for row in rows:
-        if row["sketch"] == sketch and row["bits"] == bits and row["kind"] == "observations" and row["true_n"] > 0:
-            found.setdefault(row["true_n"], row)
-    return [found[n] for n in sorted(found)]
-
-
 def at_n(rows: list[dict], sketch: str, bits: int, n: int) -> dict | None:
     return next((row for row in by_n(rows, sketch, bits) if row["true_n"] == n), None)
-
-
-def state(row: dict) -> str:
-    """'saturated' (no estimate), 'exact' (RMSE 0) or 'measured'."""
-    if row["saturated"] > 0 or row["rmse"] is None:
-        return "saturated"
-    return "exact" if row["rmse"] == 0 else "measured"
-
-
-def percent_of_n(value: float | None, row: dict | None) -> float | None:
-    return None if value is None or row is None else 100 * value / row["true_n"]
 
 
 def values_per_stream(stream: str) -> int | None:
@@ -152,18 +134,6 @@ def merge_shares(rows: list[dict], sketch: str, bits: int) -> list[tuple[int, fl
     return sorted((row["true_n"], 100 * row["merged_equals_direct"] / row["trials"]) for row in rows
                   if row["sketch"] == sketch + MERGE_SUFFIX and row["bits"] == bits
                   and row["merged_equals_direct"] is not None and row["true_n"] > 0)
-
-
-def edge(row: dict | None) -> str | None:
-    """Where a row goes on a relative RMSE axis: 'top' (saturated), 'bottom' (exact or under
-    PERCENT_FLOOR), or None (drawn as a point; also None when there is no row)."""
-    if row is None:
-        return None
-    if state(row) == "saturated" or percent_of_n(row["rmse"], row) >= PERCENT_CEILING:
-        return "top"
-    if state(row) == "exact" or percent_of_n(row["rmse"], row) < PERCENT_FLOOR:
-        return "bottom"
-    return None
 
 
 def measured_percents(rows: list[dict | None]) -> tuple[list[float | None], list[float | None], list[float | None]]:
@@ -216,19 +186,6 @@ def draw_series(ax: plt.Axes, sketch: str, xs: list[float], values: tuple[list, 
         up = [high - y for _, y, _, high in kept]
         ax.errorbar([k[0] for k in kept], [k[1] for k in kept], yerr=[down, up], fmt="none", ecolor=style["color"],
                     elinewidth=0.8, capsize=0, alpha=0.6)
-
-
-def decade_percent(value: float, _position: int) -> str:
-    """Labels log-axis ticks as percentages at powers of ten only."""
-    return f"{value:g}%" if value > 0 and math.isclose(math.log10(value), round(math.log10(value)), abs_tol=1e-9) else ""
-
-
-def percent_axis(ax: plt.Axes) -> None:
-    """A log axis of relative RMSE from PERCENT_FLOOR to PERCENT_CEILING, labelled by decade."""
-    ax.set_yscale("log")
-    ax.set_ylim(PERCENT_FLOOR, PERCENT_CEILING)
-    ax.yaxis.set_major_formatter(FuncFormatter(decade_percent))
-    ax.yaxis.set_minor_formatter(FuncFormatter(lambda *_: ""))
 
 
 def edge_rows(xs: list[float], rows: list[dict | None], where: str) -> list[float]:
