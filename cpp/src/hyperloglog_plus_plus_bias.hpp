@@ -1,10 +1,10 @@
 #pragma once
 
+#include "hyperloglog_plus_plus_bias_types.hpp"
+
 // locally calibrated from 5000 synthetic datasets per cardinality (heule et al., section 5.2).
 // bias = mean raw hll estimate - true count; checkpoints reuse dataset prefixes.
 // generated from experiments/hllpp/bias_calibration.csv.
-struct BiasPoint { double raw; double bias; };
-
 static constexpr BiasPoint kBiasP10[] = {
     { 737.8337365216906, 737.8337365216906 },
     { 750.3868168606755, 724.3868168606755 },

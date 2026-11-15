@@ -5,8 +5,10 @@
 #include <cmath>
 #include <cstdint>
 #include <iostream>
+#include <random>
 #include <set>
 #include <stdexcept>
+#include <vector>
 
 namespace {
 bool expect(bool condition, const char* message)
@@ -30,16 +32,29 @@ int main()
         bool ok = true;
         HyperLogLogPlusPlus empty(8192);
         ok &= expect(*empty.estimate() == 0 && empty.sparse(), "empty sketch");
-        ok &= expect(empty.storage_bytes() == 0, "empty sparse sketch has no allocated payload");
-        add_range(empty, 0, 10);
-        ok &= expect(empty.storage_bytes() < empty.register_count() * 6 / 8,
-            "small sparse sketch allocates less payload than dense registers");
         add_range(empty, 0, 100);
         ok &= expect(std::abs(*empty.estimate() - 100) < 0.5, "sparse estimate");
         const auto before = empty.estimate();
         add_range(empty, 0, 100);
         empty.merge(empty);
         ok &= expect(empty.estimate() == before, "duplicates and self merge");
+
+        std::mt19937_64 boundary_rng(0);
+        std::vector<std::uint64_t> boundary_hashes(263);
+        for (auto& hash : boundary_hashes) {
+                hash = boundary_rng();
+        }
+        HyperLogLogPlusPlus duplicate_boundary(8192);
+        for (std::uint64_t hash : boundary_hashes) {
+                duplicate_boundary.update(hash);
+        }
+        const auto boundary_estimate = duplicate_boundary.estimate();
+        for (int i = 0; i < 100; ++i) {
+                duplicate_boundary.update(boundary_hashes.front());
+        }
+        ok &= expect(
+            duplicate_boundary.sparse() && duplicate_boundary.estimate() == boundary_estimate,
+            "repeated updates do not force sparse-to-dense conversion");
 
         for (std::size_t n : { 60, 300, 1000, 5000 }) {
                 HyperLogLogPlusPlus direct(8192), left(8192), right(8192);
@@ -69,10 +84,16 @@ int main()
         ok &= expect(!plus.sparse() && plus.estimate() == standard.estimate(),
             "dense estimate matches HLL above 5m");
 
-        HyperLogLogPlusPlus calibrated(8192);
+        HyperLogLogPlusPlus calibrated(
+            8192, HyperLogLogPlusPlus::BiasTableSource::LocalCalibration);
         add_range(calibrated, 1, 3001);
         ok &= expect(std::abs(*calibrated.estimate() - 2918.0734868964487) < 1e-8,
-            "dense bias correction agrees with six calibration points");
+            "local dense correction agrees with its six nearest calibration points");
+
+        HyperLogLogPlusPlus published(8192);
+        add_range(published, 1, 3001);
+        ok &= expect(std::abs(*published.estimate() - 2923.4670466626499) < 1e-8,
+            "default dense correction uses the published appendix table");
 
         HyperLogLogPlusPlus collision(8192), collision_direct(8192);
         collision.update(0);
@@ -167,8 +188,6 @@ int main()
                 dense_first.update(i << 39);
         }
         ok &= expect(!dense_first.sparse(), "sparse storage converts after exceeding dense size");
-        ok &= expect(dense_first.storage_bytes() == 1024 * 6 / 8,
-            "dense registers use six bits each and release sparse storage");
         for (auto hash : special) {
                 dense_first.update(hash);
         }
@@ -208,18 +227,24 @@ int main()
                     "conversion and dense merge work at each supported precision");
 
                 HyperLogLog baseline(budget);
-                HyperLogLogPlusPlus packed(budget);
+                HyperLogLogPlusPlus byte_registers(budget);
                 const unsigned p
-                    = static_cast<unsigned>(std::bit_width(packed.register_count()) - 1);
-                for (std::size_t i = 0; i < packed.register_count(); ++i) {
+                    = static_cast<unsigned>(std::bit_width(byte_registers.register_count()) - 1);
+                for (std::size_t i = 0; i < byte_registers.register_count(); ++i) {
                         const unsigned rank = 3 + static_cast<unsigned>(i % 4);
                         const auto hash = (static_cast<std::uint64_t>(i) << (64 - p))
                             | (std::uint64_t { 1 } << (64 - p - rank));
                         baseline.update(hash);
-                        packed.update(hash);
+                        byte_registers.update(hash);
                 }
-                ok &= expect(packed.estimate() == baseline.estimate(),
-                    "packed dense registers match HLL across byte boundaries");
+                ok &= expect(!byte_registers.sparse()
+                        && byte_registers.memory_bits() == 8 * byte_registers.register_count(),
+                    "dense registers use one byte each");
+                ok &= expect(byte_registers.estimate() == baseline.estimate(),
+                    "dense byte registers match HLL");
         }
+        HyperLogLogPlusPlus partial_budget(12288);
+        ok &= expect(partial_budget.register_count() == 1024,
+            "precision selection accounts for byte registers");
         return ok ? 0 : 1;
 }

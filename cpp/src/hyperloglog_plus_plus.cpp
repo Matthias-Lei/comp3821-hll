@@ -1,13 +1,17 @@
 #include "hyperloglog_plus_plus.hpp"
 #include "hyperloglog_plus_plus_bias.hpp"
+#include "hyperloglog_plus_plus_paper_bias.hpp"
 #include <algorithm>
 #include <array>
 #include <bit>
 #include <cmath>
 #include <stdexcept>
+#include <unordered_map>
 
 namespace {
 
+// heule et al., section 5.3: 25 sparse index bits and six-bit ranks
+// https://static.googleusercontent.com/media/research.google.com/en//pubs/archive/40671.pdf
 constexpr unsigned kSparsePrecision = 25;
 constexpr unsigned kRankBits = 6;
 constexpr std::size_t kBitsPerByte = 8;
@@ -28,7 +32,7 @@ void append_varint(std::vector<std::uint8_t>& output, std::uint32_t value)
         output.push_back(static_cast<std::uint8_t>(value));
 }
 
-std::uint32_t read_varint(const std::vector<std::uint8_t>& input, std::size_t& offset)
+std::uint32_t decode_varint(const std::vector<std::uint8_t>& input, std::size_t& offset)
 {
         std::uint32_t result = 0;
         unsigned shift = 0;
@@ -53,23 +57,34 @@ Calibration calibration(const BiasPoint (&points)[N], double threshold)
         return { points, points + N, threshold };
 }
 
-Calibration calibration_for(unsigned p)
+// linear-counting thresholds come from heule et al.'s hll++ appendix
+// https://docs.google.com/document/d/1gyjfMHy43U9OWBXxfaeG-3MjGzejW1dlpyMwEYAAWEI/view
+// The default bias tables are also from that appendix; LocalCalibration selects our own tables
+Calibration calibration_for(
+    unsigned p, HyperLogLogPlusPlus::BiasTableSource bias_table_source)
 {
+        const bool use_published
+            = bias_table_source == HyperLogLogPlusPlus::BiasTableSource::PublishedAppendix;
         switch (p) {
         case 10:
-                return calibration(kBiasP10, 900);
+                return use_published ? calibration(kPaperBiasP10, 900)
+                                     : calibration(kBiasP10, 900);
         case 12:
-                return calibration(kBiasP12, 3100);
+                return use_published ? calibration(kPaperBiasP12, 3100)
+                                     : calibration(kBiasP12, 3100);
         case 13:
-                return calibration(kBiasP13, 6500);
+                return use_published ? calibration(kPaperBiasP13, 6500)
+                                     : calibration(kBiasP13, 6500);
         case 14:
-                return calibration(kBiasP14, 11500);
+                return use_published ? calibration(kPaperBiasP14, 11500)
+                                     : calibration(kBiasP14, 11500);
         default:
                 throw std::invalid_argument(
                     "HyperLogLog++ requires calibrated precision 10, 12, 13 or 14");
         }
 }
 
+// heule et al., section 5.2: average the bias of the six nearest raw estimates.
 double estimated_bias(double estimate, Calibration table)
 {
         const BiasPoint* upper = std::lower_bound(table.begin, table.end, estimate,
@@ -90,14 +105,16 @@ double estimated_bias(double estimate, Calibration table)
 
 }
 
-HyperLogLogPlusPlus::HyperLogLogPlusPlus(std::size_t budget_bits)
+HyperLogLogPlusPlus::HyperLogLogPlusPlus(
+    std::size_t budget_bits, BiasTableSource bias_table_source)
+        : bias_table_source_(bias_table_source)
 {
-        const std::size_t max_registers = budget_bits / kRankBits;
+        const std::size_t max_registers = budget_bits / kBitsPerByte;
         if (max_registers < 128) {
                 throw std::invalid_argument("HyperLogLog++ budget too small");
         }
         index_bits_ = static_cast<unsigned>(std::bit_width(max_registers) - 1);
-        (void)calibration_for(index_bits_);
+        (void)calibration_for(index_bits_, bias_table_source_);
         register_count_ = std::size_t { 1 } << index_bits_;
 }
 
@@ -121,8 +138,11 @@ void HyperLogLogPlusPlus::update(uint64_t hash)
 
 void HyperLogLogPlusPlus::update_sparse(std::uint32_t entry)
 {
-        const std::size_t dense_bytes = register_count_ * kRankBits / kBitsPerByte;
-        const std::size_t max_slots = std::bit_floor(dense_bytes / (4 * sizeof(std::uint32_t)));
+        // the paper leaves buffer sizing and load factor unspecified.
+        // The sparse policy retains the paper's six-bit dense-size threshold.
+        const std::size_t sparse_limit_bytes = register_count_ * kRankBits / kBitsPerByte;
+        const std::size_t max_slots
+            = std::bit_floor(sparse_limit_bytes / (4 * sizeof(std::uint32_t)));
         auto slot_for = [](std::uint32_t value, const std::vector<std::uint32_t>& slots) {
                 std::size_t slot = (value * kBufferHashMultiplier) & (slots.size() - 1);
                 while (slots[slot] != 0 && slots[slot] != value) {
@@ -152,7 +172,68 @@ void HyperLogLogPlusPlus::update_sparse(std::uint32_t entry)
         sparse_buffer_[slot] = entry;
         ++sparse_buffer_count_;
         if (sparse_buffer_count_ >= max_slots * 3 / 4) {
-                flush_sparse();
+                // A duplicate must not fill the buffer and force a mode change.
+                compact_sparse_buffer();
+                if (sparse_buffer_count_ >= max_slots * 3 / 4) {
+                        flush_sparse();
+                }
+        }
+}
+
+void HyperLogLogPlusPlus::compact_sparse_buffer()
+{
+        if (sparse_buffer_.empty() || sparse_buffer_count_ == 0) {
+                return;
+        }
+
+        auto prefix_of = [](std::uint32_t entry) -> std::uint32_t {
+                return (entry & 1) ? entry >> kSparseRankShift : entry >> 1;
+        };
+        auto keep_best = [&prefix_of](auto& entries, std::uint32_t entry) {
+                const std::uint32_t prefix = prefix_of(entry);
+                auto [it, inserted] = entries.emplace(prefix, entry);
+                if (!inserted && (entry & 1)
+                    && ((entry >> 1) & kRankMask) > ((it->second >> 1) & kRankMask)) {
+                        it->second = entry;
+                }
+        };
+        std::unordered_map<std::uint32_t, std::uint32_t> compressed;
+        std::size_t offset = 0;
+        std::uint32_t previous_entry = 0;
+        while (offset < compressed_sparse_.size()) {
+                previous_entry += decode_varint(compressed_sparse_, offset);
+                keep_best(compressed, previous_entry);
+        }
+
+        std::unordered_map<std::uint32_t, std::uint32_t> buffered;
+        buffered.reserve(sparse_buffer_count_);
+        for (std::uint32_t entry : sparse_buffer_) {
+                if (entry != 0) {
+                        keep_best(buffered, entry);
+                }
+        }
+
+        std::vector<std::uint32_t> compacted;
+        compacted.reserve(buffered.size());
+        for (const auto& [prefix, entry] : buffered) {
+                const auto found = compressed.find(prefix);
+                if (found == compressed.end()
+                    || ((entry & 1) && (found->second & 1)
+                        && ((entry >> 1) & kRankMask)
+                            > ((found->second >> 1) & kRankMask))) {
+                        compacted.push_back(entry);
+                }
+        }
+
+        std::fill(sparse_buffer_.begin(), sparse_buffer_.end(), 0);
+        sparse_buffer_count_ = 0;
+        for (std::uint32_t entry : compacted) {
+                std::size_t slot = (entry * kBufferHashMultiplier) & (sparse_buffer_.size() - 1);
+                while (sparse_buffer_[slot] != 0) {
+                        slot = (slot + 1) & (sparse_buffer_.size() - 1);
+                }
+                sparse_buffer_[slot] = entry;
+                ++sparse_buffer_count_;
         }
 }
 
@@ -194,7 +275,7 @@ void HyperLogLogPlusPlus::for_each_sparse(Function&& function) const
         while (offset < compressed_sparse_.size() || has_compressed_entry
             || buffer_index < sorted_buffer.size()) {
                 if (!has_compressed_entry && offset < compressed_sparse_.size()) {
-                        previous_entry += read_varint(compressed_sparse_, offset);
+                        previous_entry += decode_varint(compressed_sparse_, offset);
                         next_compressed_entry = previous_entry;
                         has_compressed_entry = true;
                 }
@@ -236,42 +317,14 @@ void HyperLogLogPlusPlus::flush_sparse()
         sparse_buffer_count_ = 0;
 }
 
-std::uint8_t HyperLogLogPlusPlus::register_value(std::size_t index) const
-{
-        const std::size_t bit = index * kRankBits;
-        const std::size_t byte = bit / kBitsPerByte;
-        const unsigned offset = static_cast<unsigned>(bit % kBitsPerByte);
-        std::uint16_t value = dense_registers_[byte];
-        if (offset > kBitsPerByte - kRankBits) {
-                value |= static_cast<std::uint16_t>(dense_registers_[byte + 1]) << kBitsPerByte;
-        }
-        return static_cast<std::uint8_t>((value >> offset) & kRankMask);
-}
-
-void HyperLogLogPlusPlus::set_register(std::size_t index, std::uint8_t value)
-{
-        const std::size_t bit = index * kRankBits;
-        const std::size_t byte = bit / kBitsPerByte;
-        const unsigned offset = static_cast<unsigned>(bit % kBitsPerByte);
-        std::uint16_t packed = dense_registers_[byte];
-        if (offset > kBitsPerByte - kRankBits) {
-                packed |= static_cast<std::uint16_t>(dense_registers_[byte + 1]) << kBitsPerByte;
-        }
-        packed = static_cast<std::uint16_t>((packed & ~(kRankMask << offset)) | (value << offset));
-        dense_registers_[byte] = static_cast<std::uint8_t>(packed);
-        if (offset > kBitsPerByte - kRankBits) {
-                dense_registers_[byte + 1] = static_cast<std::uint8_t>(packed >> kBitsPerByte);
-        }
-}
-
 void HyperLogLogPlusPlus::update_dense(std::uint64_t hash)
 {
         const std::size_t index = hash >> (64 - index_bits_);
         const std::uint64_t remaining
             = (hash << index_bits_) | (std::uint64_t { 1 } << (index_bits_ - 1));
         const auto rank = static_cast<std::uint8_t>(std::countl_zero(remaining) + 1);
-        if (rank > register_value(index)) {
-                set_register(index, rank);
+        if (rank > dense_registers_[index]) {
+                dense_registers_[index] = rank;
         }
 }
 
@@ -291,7 +344,7 @@ void HyperLogLogPlusPlus::add_to_dense(std::uint32_t entry)
 
 void HyperLogLogPlusPlus::to_dense()
 {
-        dense_registers_.assign(register_count_ * kRankBits / kBitsPerByte, 0);
+        dense_registers_.assign(register_count_, 0);
         for_each_sparse([&](std::uint32_t entry) { add_to_dense(entry); });
         std::vector<std::uint8_t>().swap(compressed_sparse_);
         std::vector<std::uint32_t>().swap(sparse_buffer_);
@@ -311,12 +364,13 @@ std::optional<double> HyperLogLogPlusPlus::estimate() const
         double sum = 0;
         std::size_t zeros = 0;
         for (std::size_t index = 0; index < register_count_; ++index) {
-                const std::uint8_t value = register_value(index);
+                const std::uint8_t value = dense_registers_[index];
                 sum += std::ldexp(1.0, -value);
                 zeros += value == 0;
         }
         const double m = static_cast<double>(register_count_);
-        const Calibration table = calibration_for(index_bits_);
+        const Calibration table = calibration_for(index_bits_, bias_table_source_);
+        // heule et al., figure 6: raw hll estimate and bias correction up to 5m.
         double estimate = (0.7213 / (1.0 + 1.079 / m)) * m * m / sum;
         if (estimate <= 5 * m) {
                 estimate -= estimated_bias(estimate, table);
@@ -333,13 +387,7 @@ std::optional<double> HyperLogLogPlusPlus::estimate() const
 std::size_t HyperLogLogPlusPlus::memory_bits() const
 {
         return sparse_ ? compressed_sparse_.size() * 8 + sparse_buffer_count_ * 32
-                       : register_count_ * kRankBits;
-}
-
-std::size_t HyperLogLogPlusPlus::storage_bytes() const
-{
-        return compressed_sparse_.capacity() + sparse_buffer_.capacity() * sizeof(std::uint32_t)
-            + dense_registers_.capacity();
+                       : dense_registers_.size() * kBitsPerByte;
 }
 
 void HyperLogLogPlusPlus::merge(const HyperLogLogPlusPlus& other)
@@ -355,9 +403,9 @@ void HyperLogLogPlusPlus::merge(const HyperLogLogPlusPlus& other)
                         to_dense();
                 }
                 for (std::size_t index = 0; index < register_count_; ++index) {
-                        const std::uint8_t value = other.register_value(index);
-                        if (value > register_value(index)) {
-                                set_register(index, value);
+                        const std::uint8_t value = other.dense_registers_[index];
+                        if (value > dense_registers_[index]) {
+                                dense_registers_[index] = value;
                         }
                 }
                 return;

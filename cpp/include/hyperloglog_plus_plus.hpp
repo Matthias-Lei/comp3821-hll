@@ -7,13 +7,18 @@
 
 class HyperLogLogPlusPlus : public Sketch {
 public:
-        explicit HyperLogLogPlusPlus(std::size_t budget_bits);
+        enum class BiasTableSource {
+                PublishedAppendix,
+                LocalCalibration,
+        };
+
+        explicit HyperLogLogPlusPlus(
+            std::size_t budget_bits,
+            BiasTableSource bias_table_source = BiasTableSource::PublishedAppendix);
 
         void update(uint64_t hashed_value) override;
         std::optional<double> estimate() const override;
         std::size_t memory_bits() const override;
-        // Allocated vector capacity; excludes object and allocator overhead.
-        std::size_t storage_bytes() const;
         void merge(const HyperLogLogPlusPlus& other);
 
         bool sparse() const
@@ -27,17 +32,17 @@ public:
 
 private:
         void update_sparse(std::uint32_t entry);
+        void compact_sparse_buffer();
         void flush_sparse();
         template <class Function>
         void for_each_sparse(Function&& function) const;
         void update_dense(std::uint64_t hash);
-        std::uint8_t register_value(std::size_t index) const;
-        void set_register(std::size_t index, std::uint8_t value);
         void to_dense();
         void add_to_dense(std::uint32_t entry);
 
         unsigned index_bits_;
         std::size_t register_count_;
+        BiasTableSource bias_table_source_;
         std::vector<std::uint8_t> compressed_sparse_;
         std::vector<std::uint32_t> sparse_buffer_;
         std::size_t sparse_buffer_count_ = 0;

@@ -6,7 +6,7 @@
 
 class HyperLogLog : public Sketch {
 public:
-        static constexpr std::size_t kRegisterBits = 6;
+        static constexpr std::size_t kRegisterBits = 8;
 
         explicit HyperLogLog(std::size_t budget_bits);
 
