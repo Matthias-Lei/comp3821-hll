@@ -18,6 +18,8 @@ from results_analyser import (
     bloom_filter_theory,
     group_trials,
     hyperloglog_applies,
+    hyperloglog_plus_plus_applies,
+    hyperloglog_plus_plus_theory,
     hyperloglog_registers,
     hyperloglog_theory,
     kmv_theory,
@@ -241,8 +243,9 @@ def test_bloom_filter_theory_is_linear_counting_on_k_n_values() -> None:
 
 
 def test_hyperloglog_registers_match_the_cpp_sketch() -> None:
-    # The largest power of two that fits budget / 6 bits: 8192 bits gives 1365, so 1024 registers.
-    assert [hyperloglog_registers(m) for m in (8192, 32768, 65536, 131072, 1000)] == [1024, 4096, 8192, 16384, 128]
+    # The largest power of two that fits budget / 8 bits: 8192 bits gives 1024 registers, 1000 bits
+    # gives 125, so 64 registers.
+    assert [hyperloglog_registers(m) for m in (8192, 32768, 65536, 131072, 1000)] == [1024, 4096, 8192, 16384, 64]
 
 
 def test_hyperloglog_theory_has_two_regimes() -> None:
@@ -337,3 +340,24 @@ def test_writers_add_a_merge_table(tmp_path: Path) -> None:
     markdown = (tmp_path / "summary.md").read_text(encoding="utf-8")
     assert "Merging two disjoint parts of the stream:" in markdown
     assert "| LinearCounting | 8192 | 480 | 520 | 1000 | 2 of 2 | 0 of 2 | 0.00 | 1.00 | 0.10% |" in markdown
+
+
+def test_hyperloglog_plus_plus_is_linear_counting_over_2_to_the_25_while_sparse() -> None:
+    # 8192 bits -> 1024 registers; n = 50 is under 0.1 r, so every seed is still sparse.
+    assert hyperloglog_plus_plus_theory(50, 8192) == linear_counting_theory(50, 2 ** 25)
+    assert hyperloglog_plus_plus_theory(50, 8192)[1] < 0.01  # almost exact
+
+
+def test_hyperloglog_plus_plus_is_hyperloglog_once_dense() -> None:
+    for n in (500, 5000, 100_000):
+        assert hyperloglog_plus_plus_theory(n, 8192) == hyperloglog_theory(n, 8192)
+    assert hyperloglog_plus_plus_theory(100_000, 8192) == (0.0, pytest.approx(1.04 * 100_000 / 32))
+
+
+def test_hyperloglog_plus_plus_is_judged_only_once_dense() -> None:
+    registers = 1024  # at 8192 bits
+    assert not hyperloglog_plus_plus_applies(0.1 * registers, 8192)  # sparse: too few collisions to judge
+    assert not hyperloglog_plus_plus_applies(0.5 * registers, 8192)
+    assert not hyperloglog_plus_plus_applies(3 * registers, 8192)
+    assert hyperloglog_plus_plus_applies(5 * registers, 8192)
+    assert predict("HyperLogLogPlusPlusMerge", 5 * registers, 8192) == predict("HyperLogLogPlusPlus", 5 * registers, 8192)

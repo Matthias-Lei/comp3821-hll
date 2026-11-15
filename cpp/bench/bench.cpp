@@ -220,6 +220,13 @@ static void BM_HyperLogLogPlusPlus(benchmark::State& state)
 }
 SKETCH_BENCHMARK(BM_HyperLogLogPlusPlus);
 
+static void BM_HyperLogLogPlusPlusMerge(benchmark::State& state)
+{
+        bench_merge(
+            state, [](std::size_t memory_bits) { return HyperLogLogPlusPlus(memory_bits); });
+}
+SKETCH_BENCHMARK(BM_HyperLogLogPlusPlusMerge);
+
 int main(int argc, char** argv)
 {
         if (argc < 2) {

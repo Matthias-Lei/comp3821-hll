@@ -43,6 +43,11 @@ SKETCH_STYLE = {
     "LinearCounting": {"color": "#2a78d6", "marker": "o", "label": "Linear Counting"},
     "BloomFilter": {"color": "#eb6834", "marker": "s", "label": "Bloom filter"},
     "HyperLogLog": {"color": "#1baf7a", "marker": "^", "label": "HyperLogLog"},
+    # Slot 4 passes the validator for lines (adjacent pairs); yellow is under 3:1 against the
+    # surface, so the line ends are labelled directly.
+    "KMinVals": {"color": "#eda100", "marker": "D", "label": "K-Minimum Values"},
+    # Slot 5 (magenta) also passes for lines and is under 3:1, so it is labelled directly too.
+    "HyperLogLogPlusPlus": {"color": "#e87ba4", "marker": "v", "label": "HyperLogLog++"},
 }
 SURFACE = "#fcfcfb"
 INK = "#0b0b0b"

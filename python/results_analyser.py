@@ -10,6 +10,15 @@ relative errors, the storage actually used, the number of saturated trials and t
 pass. It compares each sketch with its theoretical prediction within the range of n where the
 formula applies, and reports how well merged sketches of two disjoint parts of a stream do.
 It writes data/analysis/summary.csv and data/analysis/summary.md.
+
+data/ is in .gitignore. The full run's raw JSON (results/raw/all-results.tar.gz, 905 streams x
+5 sketches x 4 budgets x 64 seeds) and this script's output for it (results/analysis/) are in
+the data repo, https://github.com/Matthias-Lei/comp3821-hll-data, on the branch
+sid-linear-counting-results. plot_linear_counting.py's docstring lists the folder and the
+summary's columns. To analyse that run again:
+
+    tar -xzf all-results.tar.gz
+    python3 python/results_analyser.py --results all-results --output data/analysis-all
 """
 import argparse
 import csv
@@ -116,9 +125,14 @@ class Summary:
 # predicted RMSE). The constants mirror the C++ sketches, so keep them in step with the code.
 
 BLOOM_HASHES = 3  # k_ in cpp/src/bloom_filter.cpp
-HLL_REGISTER_BITS = 6  # HyperLogLog::kRegisterBits
+HLL_REGISTER_BITS = 8  # HyperLogLog::kRegisterBits; HyperLogLog++ also keeps one byte per register
 HLL_SMALL_RANGE = 2.5  # HyperLogLog switches to Linear Counting when the estimate is <= 2.5 r
 KMV_BITS_PER_VALUE = 64  # proposal: KMV stores up to B / 64 hash values
+HLLPP_SPARSE_PRECISION = 25  # kSparsePrecision in hyperloglog_plus_plus.cpp: 2^25 sparse slots
+# HyperLogLog++ leaves sparse mode once its compressed list outgrows the paper's six-bit dense
+# size, near 0.2 r (about 4 bytes per entry against 6/8 of a byte per register), even though its
+# dense registers are now whole bytes; below 0.1 r every seed is still sparse.
+HLLPP_SPARSE_SURE = 0.1
 
 
 def linear_counting_theory(n: float, m: float) -> tuple[float, float]:
@@ -168,6 +182,25 @@ def hyperloglog_applies(n: float, m: float) -> bool:
     return n <= 0.8 * HLL_SMALL_RANGE * registers or n >= 5 * registers
 
 
+def hyperloglog_plus_plus_theory(n: float, m: float) -> tuple[float, float]:
+    """Heule et al. (2013), with the same r registers as HyperLogLog. While sparse it counts the
+    occupied slots of 2^25 and estimates with Linear Counting over them; dense, it corrects the
+    raw estimate's bias from a calibrated table up to 5 r, and above that it is HyperLogLog
+    (relative standard error 1.04 / sqrt(r)). In between, the HyperLogLog formulas are a guide only."""
+    if n <= HLLPP_SPARSE_SURE * hyperloglog_registers(m):
+        return linear_counting_theory(n, 2 ** HLLPP_SPARSE_PRECISION)
+    return hyperloglog_theory(n, m)
+
+
+def hyperloglog_plus_plus_applies(n: float, m: float) -> bool:
+    """Judged only past the bias correction (n >= 5 r). In sparse mode the prediction holds but
+    cannot be judged with 64 seeds: over 2^25 slots a collision is so rare (about n^2 / 2^26, under
+    0.05 for n <= 0.1 r) that every seed gives the same, almost exact estimate, so the measured RMSE
+    is the estimator's tiny deterministic bias with an interval of width 0. In between, the mode
+    switch and the calibrated correction leave no formula to judge."""
+    return n >= 5 * hyperloglog_registers(m)
+
+
 def kmv_theory(n: float, m: float) -> tuple[float, float]:
     """Bar-Yossef et al. (2002), in the unbiased form (k - 1) / U_(k) with k = B / 64: exact
     for n < k, otherwise unbiased with variance n (n - k + 1) / (k - 2) (Beyer et al. 2007)."""
@@ -185,6 +218,7 @@ THEORY: dict[str, Callable[[float, float], tuple[float, float]]] = {
     "LinearCounting": linear_counting_theory,
     "BloomFilter": bloom_filter_theory,
     "HyperLogLog": hyperloglog_theory,
+    "HyperLogLogPlusPlus": hyperloglog_plus_plus_theory,
     "KMinVals": kmv_theory,
 }
 
@@ -192,6 +226,7 @@ THEORY: dict[str, Callable[[float, float], tuple[float, float]]] = {
 # estimator's formula applies". Sketches not listed apply everywhere they have not saturated.
 THEORY_APPLIES: dict[str, Callable[[float, float], bool]] = {
     "HyperLogLog": hyperloglog_applies,
+    "HyperLogLogPlusPlus": hyperloglog_plus_plus_applies,
 }
 
 
