@@ -53,7 +53,7 @@ int main()
         all_passed &= expect(
             sketch_of({ }, 131072).register_count() == 16384, "131072 bits gives 16384 registers");
         all_passed
-            &= expect(sketch_of({ }, 8192).memory_bits() == 1024 * 6, "memory_bits is m * 6");
+            &= expect(sketch_of({ }, 8192).memory_bits() == 1024 * 8, "memory_bits is m * 8");
 
         for (std::size_t count : { 1, 2, 5, 10 }) {
                 const double estimate = *sketch_of(distinct_keys(count)).estimate();

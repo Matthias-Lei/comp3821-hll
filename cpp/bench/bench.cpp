@@ -14,6 +14,7 @@
 #include "dummy_sketch.hpp"
 #include "hash.hpp"
 #include "hyperloglog.hpp"
+#include "hyperloglog_plus_plus.hpp"
 #include "kmv.hpp"
 #include "linear_counting.hpp"
 
@@ -210,12 +211,14 @@ static void BM_KMinVals(benchmark::State& state)
 {
         bench_sketch(state, [](std::size_t memory_bits) { return KMinValues(memory_bits); });
 }
-BENCHMARK(BM_KMinVals)
-    ->Arg(8192)
-    ->Arg(32768)
-    ->Arg(65536)
-    ->Arg(131072)
-    ->Unit(benchmark::kMillisecond);
+SKETCH_BENCHMARK(BM_KMinVals);
+
+static void BM_HyperLogLogPlusPlus(benchmark::State& state)
+{
+        bench_sketch(
+            state, [](std::size_t memory_bits) { return HyperLogLogPlusPlus(memory_bits); });
+}
+SKETCH_BENCHMARK(BM_HyperLogLogPlusPlus);
 
 int main(int argc, char** argv)
 {
