@@ -82,16 +82,20 @@ if __name__ == "__main__":
 
 
     if is_remote:
-        job_generator = Generator.get_generator("sql_job", make_directories="--make-directories" in sys.argv)
-        job_generator.setup()
-
         import numpy as np
 
-        for name, sql in job_generator.queries().items():
-            data = np.concatenate([np.empty(0, dtype=np.uint64), *job_generator.generate(sql)])
-            stream = CEBSObject(stream=CEBSStream(data, StreamType.XXHASH64)).to_bytes()
+        for sql_generator_name in ("sql_job", "sql_policing", "sql_lichess", "sql_weather"):
+            sql_generator = Generator.get_generator(sql_generator_name, make_directories="--make-directories" in sys.argv)
+            sql_generator.setup()
 
-            path = CEBS_OUTPUT_DIR / f"job_{name}.cebs"
-            serialiser.write_stream(stream, StreamLocation.TEMP_FILE, path=path)
+            for name, sql in sql_generator.queries().items():
+                data = np.concatenate([np.empty(0, dtype=np.uint64), *sql_generator.generate(sql)])
+                stream = CEBSObject(stream=CEBSStream(data, StreamType.XXHASH64)).to_bytes()
 
-            print(f"Wrote {len(data)} values to {path}")
+                path = CEBS_OUTPUT_DIR / f"{sql_generator.NAME}_{name}.cebs"
+                serialiser.write_stream(stream, StreamLocation.TEMP_FILE, path=path)
+
+                print(f"Wrote {len(data)} values to {path}")
+
+            sql_generator.connection.close()
+            (sql_generator.directory / sql_generator.DATABASE_NAME).unlink()

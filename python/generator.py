@@ -8,6 +8,7 @@ from typing import Optional
 import uuid
 
 import re
+import shutil
 import subprocess
 import sys
 
@@ -236,7 +237,7 @@ DEFAULT_FETCH_SIZE = 2 ** 24
 def _setup_directory(directory: Path, make_directories: bool = False) -> None:
     if not directory.exists():
         if not make_directories:
-            if input(f"Create directories to {directory}? (y/N) ").lower() != "y":
+            if input(f"Create directories to {directory}? (yN) ").lower() != "y":
                 sys.exit()
         directory.mkdir(parents=True, exist_ok=True)
 
@@ -255,6 +256,13 @@ class SQLGenerator(Generator):
         self.connection = duckdb.connect(str(self.directory / self.DATABASE_NAME))
         self._setup()
 
+    def _remove(self, *paths: Path) -> None:
+        for path in paths:
+            if path.is_dir():
+                shutil.rmtree(path)
+            else:
+                path.unlink(missing_ok=True)
+
     def generate(self, query: str | Path) -> Iterable[npt.NDArray[np.uint64]]:
         query = query.read_text() if isinstance(query, Path) else query
         query_result = self.connection.execute(query)
@@ -265,6 +273,7 @@ class SQLGenerator(Generator):
 
 @Generator.register("sql_job")
 class JOBQueryGenerator(SQLGenerator):
+    NAME = "job"
     DATABASE_NAME = "job.duckdb"
 
     def _setup(self) -> None:
@@ -280,6 +289,8 @@ class JOBQueryGenerator(SQLGenerator):
         self.connection.execute((self.directory / "schema.sql").read_text())
         self._import_csv()
         self.connection.commit()
+
+        self._remove(self.directory / "imdb")
 
     def _setup_repository(self) -> Path:
         subprocess.run(["bash", str(PARENT_DIR / "scripts" / "job_setup_repository.sh"), "--directory", str(self.directory)], check=True)
@@ -308,4 +319,58 @@ class JOBQueryGenerator(SQLGenerator):
             queries[f"query_{path.stem}"] = f"SELECT {expression} FROM {remainder}"
 
         return queries
+
+
+
+SHARED_SQL_DIRECTORY = PARENT_DIR / "shared_sql"
+
+
+class SharedSQLGenerator(SQLGenerator):
+    NAME: str
+    CLEAR_FILES: tuple[str, ...] = ()
+
+    def _setup(self) -> None:
+        if self.connection.execute("SHOW TABLES").fetchall():
+            return
+
+        subprocess.run(["bash", str(PARENT_DIR / "scripts" / f"{self.NAME.lower()}_setup_database.sh"), "--directory", str(self.directory)], check=True)
+
+        schema = (SHARED_SQL_DIRECTORY / self.NAME.lower() / "schema.sql").read_text()
+        schema = schema.replace("{directory}", str(self.directory / self.NAME.lower()).replace("'", "''"))
+
+        self.connection.begin()
+        self.connection.execute(schema)
+        self.connection.commit()
+
+        self._remove(*(self.directory / self.NAME.lower() / path for path in self.CLEAR_FILES))
+
+    def queries(self) -> dict[str, str]:
+        queries = {}
+
+        for path in sorted((SHARED_SQL_DIRECTORY / self.NAME.lower() / "queries").glob("*.sql")):
+            lines = (line for line in path.read_text().splitlines() if not line.strip().startswith("--"))
+            queries[f"query_{path.stem.removeprefix(self.NAME.lower())}"] = "\n".join(lines).strip().rstrip(";")
+
+        return queries
+
+
+
+@Generator.register("sql_lichess")
+class LichessQueryGenerator(SharedSQLGenerator):
+    NAME = "lichess"
+    CLEAR_FILES = ("puzzles.csv",)
+    DATABASE_NAME = f"{NAME}.duckdb"
+
+
+@Generator.register("sql_policing")
+class PolicingQueryGenerator(SharedSQLGenerator):
+    NAME = "policing"
+    CLEAR_FILES = ("csv",)
+    DATABASE_NAME = f"{NAME}.duckdb"
+
+
+@Generator.register("sql_weather")
+class WeatherQueryGenerator(SharedSQLGenerator):
+    NAME = "weather"
+    DATABASE_NAME = f"{NAME}.duckdb"
 
