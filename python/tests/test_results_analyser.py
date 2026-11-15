@@ -243,8 +243,9 @@ def test_bloom_filter_theory_is_linear_counting_on_k_n_values() -> None:
 
 
 def test_hyperloglog_registers_match_the_cpp_sketch() -> None:
-    # The largest power of two that fits budget / 6 bits: 8192 bits gives 1365, so 1024 registers.
-    assert [hyperloglog_registers(m) for m in (8192, 32768, 65536, 131072, 1000)] == [1024, 4096, 8192, 16384, 128]
+    # The largest power of two that fits budget / 8 bits: 8192 bits gives 1024 registers, 1000 bits
+    # gives 125, so 64 registers.
+    assert [hyperloglog_registers(m) for m in (8192, 32768, 65536, 131072, 1000)] == [1024, 4096, 8192, 16384, 64]
 
 
 def test_hyperloglog_theory_has_two_regimes() -> None:

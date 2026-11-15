@@ -26,6 +26,8 @@ data/analysis-all/figures/comparison/:
    per budget (start-up cost on short streams, the steady rate on long ones).
 9. speed_vs_accuracy: each sketch at each budget as one point, nanoseconds per value against
    relative RMSE at n = 100,000.
+10. rmse_vs_n_16kib: absolute RMSE of every sketch against n on one axis at the largest budget,
+    16 KiB. Hollow markers on the top edge: a seed saturated; on the bottom edge: RMSE exactly 0.
 
 comparison_key_numbers.md has the tables the text quotes: memory used, relative RMSE at fixed n,
 theory confirmed, saturation, merge exactness and speed.
@@ -60,6 +62,7 @@ from plot_sketches import (  # noqa: E402, F401 (by_n, state and the percent lim
     RATIO_BAND,
     REGION_FILL,
     SPECS,
+    absolute_edge,
     by_n,
     edge,
     first_saturated_n,
@@ -76,6 +79,7 @@ MIN_TIMED_VALUES = 1_000_000  # long enough that the time per value is not start
 SPEED_ACCURACY_N = 100_000  # the n whose relative RMSE the speed-against-accuracy figure uses
 NSAMPLE = re.compile(r"_nsample(\d+)")
 HLLPP_DENSE_SWITCH = 0.2  # HyperLogLog++ leaves sparse mode near 0.2 r (see results_analyser)
+LARGEST_BUDGET = BUDGETS[-1]  # 16 KiB: the budget of the one-axis absolute RMSE figure
 
 # Five series on one plot fail the dataviz palette's all-pairs check past three hues, so hue
 # marks the family (categorical slots 1-3, validated all-pairs: bitmaps blue, order statistic
@@ -92,6 +96,10 @@ SKETCH_STYLE = {
 SKETCHES = tuple(SKETCH_STYLE)
 RATIO_TICKS = (0.5, 0.6, 0.7, 0.8, 0.9, 1, 1.2, 1.5, 2)
 TIME_DODGE = 0.06  # sketches at the same budget sit 2^(±0.06 i) apart so their ranges do not overlap
+TWIN, TWIN_OF = "HyperLogLogPlusPlus", "HyperLogLog"  # HLL++ is exactly HLL once dense and past 5 r
+TWIN_DODGE = 1.1  # where HLL++'s value equals HLL's, its point sits this factor to the right
+TWIN_LABEL = "HyperLogLog++ = HyperLogLog here (drawn just to the right)"
+EDGE_TEXT_ROOM = 0.2  # share of the log x range the edge text "saturated" needs beside a marker
 SATURATED_LABEL = f"hollow, top edge: a seed saturated (no estimate), or RMSE over {PERCENT_CEILING:g}% of n"
 EXACT_LABEL = f"hollow, bottom edge: RMSE 0 or under {PERCENT_FLOOR:g}% of n (near exact)"
 
@@ -144,6 +152,15 @@ def measured_percents(rows: list[dict | None]) -> tuple[list[float | None], list
             [percent_of_n(row["rmse_high"], row) if row else None for row in kept])
 
 
+def absolute_values(rows: list[dict]) -> tuple[list[float | None], list[float | None], list[float | None]]:
+    """RMSE, interval low and high in distinct values for the rows drawn as points (None for the
+    rows that go on an edge: saturated or exactly 0)."""
+    kept = [row if absolute_edge(row) is None else None for row in rows]
+    return ([row["rmse"] if row else None for row in kept],
+            [row["rmse_low"] if row else None for row in kept],
+            [row["rmse_high"] if row else None for row in kept])
+
+
 # --- Drawing helpers ------------------------------------------------------------------------
 
 def sketch_handles(sketches: tuple[str, ...] = SKETCHES) -> dict[str, object]:
@@ -164,13 +181,84 @@ def edge_handles(exact: bool = True) -> dict[str, object]:
 
 
 def draw_edges(ax: plt.Axes, sketch: str, saturated_x: list[float], exact_x: list[float], index: int) -> None:
-    """Hollow markers on the top edge (saturated) and bottom edge (exact), one row per sketch."""
+    """Hollow markers on the top edge (saturated) and bottom edge (exact), one row per sketch.
+    Call label_top_edges once the axis is drawn to name the top-edge rows."""
     style = SKETCH_STYLE[sketch]
     transform = ax.get_xaxis_transform()
     for xs, y in ((saturated_x, 1 - EDGE_STEP * (index + 0.5)), (exact_x, EDGE_STEP * (index + 0.5))):
         if xs:
             ax.plot(xs, [y] * len(xs), linestyle="none", marker=style["marker"], markersize=5, color=style["color"],
                     markerfacecolor=SURFACE, markeredgewidth=1.2, transform=transform, clip_on=False)
+
+
+def top_edge_text(rows: list[dict | None]) -> str:
+    """What the top-edge markers of these rows mean: saturated, off the scale, or both."""
+    saturated = {state(row) == "saturated" for row in rows if row is not None}
+    return {frozenset({True}): "saturated", frozenset({False}): "off scale"}.get(frozenset(saturated), "saturated / off scale")
+
+
+def edge_text_place(xs: list[float], low: float, high: float, log: bool = True) -> tuple[float, str]:
+    """Where the text for a row of top-edge markers at xs goes on an x axis from low to high (log or
+    linear): right of the last marker, else left of the first, else in the widest gap between
+    markers. Returns (x, horizontal alignment)."""
+    to_axis, from_axis = (math.log, math.exp) if log else (float, float)
+    points = sorted(to_axis(x) for x in xs)
+    start, end = to_axis(low), to_axis(high)
+    room = EDGE_TEXT_ROOM * (end - start)
+    if points[-1] + room <= end:
+        return max(xs), "left"
+    if points[0] - room >= start:
+        return min(xs), "right"
+    gaps = [(b - a, (a + b) / 2) for a, b in zip(points, points[1:])] or [(0.0, points[0])]
+    return from_axis(max(gaps)[1]), "center"
+
+
+def label_top_edges(ax: plt.Axes, rows: list[tuple[int, list[float], str]]) -> None:
+    """Name each sketch's row of top-edge markers ("saturated" or "off scale") in muted ink beside
+    the markers. rows holds (sketch index, marker xs, text); call after everything is drawn."""
+    low, high = ax.get_xlim()
+    transform = ax.get_xaxis_transform()
+    for index, xs, text in rows:
+        if not xs:
+            continue
+        x, align = edge_text_place(xs, low, high, log=ax.get_xscale() == "log")
+        offset = {"left": 5, "right": -5, "center": 0}[align]
+        ax.annotate(text, xy=(x, 1 - EDGE_STEP * (index + 0.5)), xycoords=transform, xytext=(offset, 0),
+                    textcoords="offset points", ha=align, va="center", fontsize=6.5, color=INK_MUTED,
+                    annotation_clip=False)
+
+
+def same_value(row: dict | None, twin: dict | None) -> bool:
+    """True when two rows show the same thing: equal RMSE (exact equality, as HLL++ = HLL past 5 r)
+    or both saturated."""
+    if row is None or twin is None:
+        return False
+    if state(row) == "saturated" or state(twin) == "saturated":
+        return state(row) == state(twin)
+    return row["rmse"] == twin["rmse"]
+
+
+def dodged(sketch: str, xs: list[float], rows: list[dict | None], twins: list[dict | None]) -> tuple[list[float], bool]:
+    """xs, with HyperLogLog++'s points moved right by TWIN_DODGE where they equal HyperLogLog's
+    (twins lines up with rows), so the two series do not hide each other. Also says whether any moved."""
+    if sketch != TWIN:
+        return list(xs), False
+    moved = [x * TWIN_DODGE if same_value(row, twin) else x for x, row, twin in zip(xs, rows, twins)]
+    return moved, moved != list(xs)
+
+
+def twin_handles(any_dodged: bool) -> dict[str, object]:
+    """The legend note for dodged HyperLogLog++ points, when any were dodged."""
+    if not any_dodged:
+        return {}
+    style = SKETCH_STYLE[TWIN]
+    return {TWIN_LABEL: Line2D([], [], color=style["color"], marker=style["marker"], linestyle="none", markersize=6)}
+
+
+def twins_by_n(rows: list[dict], points: list[dict], bits: int) -> list[dict | None]:
+    """HyperLogLog's row at each point's n (None where it has none)."""
+    hll = {row["true_n"]: row for row in by_n(rows, TWIN_OF, bits)}
+    return [hll.get(row["true_n"]) for row in points]
 
 
 def draw_series(ax: plt.Axes, sketch: str, xs: list[float], values: tuple[list, list, list]) -> None:
@@ -222,14 +310,20 @@ def plot_relative_rmse_vs_n(rows: list[dict], stem: Path) -> list[Path]:
     with plt.rc_context(FIGURE_STYLE):
         fig, axes = budget_grid("Relative RMSE at equal memory: every sketch on the same streams (64 hash seeds per point)",
                                 "relative RMSE, % of n (95% CI)")
+        any_dodged = False
         for ax, bits in zip(axes, BUDGETS):
             percent_axis(ax)
+            labels = []
             for index, sketch in enumerate(SKETCHES):
                 points = by_n(rows, sketch, bits)
-                xs = [row["true_n"] for row in points]
+                xs, moved = dodged(sketch, [row["true_n"] for row in points], points, twins_by_n(rows, points, bits))
+                any_dodged |= moved
                 draw_series(ax, sketch, xs, measured_percents(points))
-                draw_edges(ax, sketch, edge_rows(xs, points, "top"), edge_rows(xs, points, "bottom"), index)
-        return finish(fig, {**sketch_handles(), **edge_handles()}, stem, top=0.9)
+                top = edge_rows(xs, points, "top")
+                draw_edges(ax, sketch, top, edge_rows(xs, points, "bottom"), index)
+                labels.append((index, top, top_edge_text([row for row in points if edge(row) == "top"])))
+            label_top_edges(ax, labels)
+        return finish(fig, {**sketch_handles(), **edge_handles(), **twin_handles(any_dodged)}, stem, top=0.88)
 
 
 def plot_relative_bias_vs_n(rows: list[dict], stem: Path) -> list[Path]:
@@ -261,7 +355,8 @@ def plot_equal_memory(rows: list[dict], stem: Path) -> list[Path]:
         return []
     kib = [bits / BITS_PER_KIB for bits in BUDGETS]
     with plt.rc_context(FIGURE_STYLE):
-        fig, axes = plt.subplots(1, len(targets), figsize=(2.6 * len(targets) + 1.2, 4.4), sharey=True, squeeze=False)
+        fig, axes = plt.subplots(1, len(targets), figsize=(2.6 * len(targets) + 1.2, 4.6), sharey=True, squeeze=False)
+        any_dodged = False
         for ax, n in zip(axes[0], targets):
             ax.set_xscale("log", base=2)
             percent_axis(ax)
@@ -269,15 +364,51 @@ def plot_equal_memory(rows: list[dict], stem: Path) -> list[Path]:
             ax.xaxis.set_minor_locator(NullLocator())
             ax.set_xlim(kib[0] / 1.4, kib[-1] * 1.4)
             ax.set_title(f"n = {n:,}", loc="left")
+            labels = []
             for index, sketch in enumerate(SKETCHES):
                 found = [at_n(rows, sketch, bits, n) for bits in BUDGETS]
-                draw_series(ax, sketch, kib, measured_percents(found))
-                draw_edges(ax, sketch, edge_rows(kib, found, "top"), edge_rows(kib, found, "bottom"), index)
+                xs, moved = dodged(sketch, kib, found, [at_n(rows, TWIN_OF, bits, n) for bits in BUDGETS])
+                any_dodged |= moved
+                draw_series(ax, sketch, xs, measured_percents(found))
+                top = edge_rows(xs, found, "top")
+                draw_edges(ax, sketch, top, edge_rows(xs, found, "bottom"), index)
+                labels.append((index, top, top_edge_text([row for row in found if edge(row) == "top"])))
+            label_top_edges(ax, labels)
         axes[0][0].set_ylabel("relative RMSE, % of n (95% CI)")
         fig.supxlabel("memory budget (KiB)", color=INK_SECONDARY)
         fig.suptitle("Which sketch is most accurate under the same memory? (64 hash seeds per point)",
                      x=0.06, ha="left", color=INK, fontsize=11)
-        return finish(fig, {**sketch_handles(), **edge_handles()}, stem, ncol=3, top=0.86)
+        return finish(fig, {**sketch_handles(), **edge_handles(), **twin_handles(any_dodged)}, stem, ncol=3, top=0.83)
+
+
+def plot_rmse_vs_n_at_budget(rows: list[dict], stem: Path, bits: int = LARGEST_BUDGET) -> list[Path]:
+    """Absolute RMSE against n for every sketch on one axis at one budget (95% CI, one
+    observations stream per n). Saturated groups sit on the top edge, exact ones on the bottom."""
+    series = {sketch: by_n(rows, sketch, bits) for sketch in SKETCHES}
+    if not any(series.values()):
+        return []
+    hollow = {"linestyle": "none", "marker": "o", "markersize": 6, "color": INK_MUTED, "markerfacecolor": SURFACE}
+    edges = {"hollow, top edge: a seed saturated (no estimate)": Line2D([], [], **hollow),
+             "hollow, bottom edge: RMSE exactly 0 (every seed exact)": Line2D([], [], **hollow)}
+    with plt.rc_context(FIGURE_STYLE):
+        fig, ax = plt.subplots(figsize=(8.5, 5.8))
+        ax.set_xscale("log")
+        ax.set_yscale("log")
+        any_dodged, labels = False, []
+        for index, (sketch, points) in enumerate(series.items()):
+            xs, moved = dodged(sketch, [row["true_n"] for row in points], points, twins_by_n(rows, points, bits))
+            any_dodged |= moved
+            draw_series(ax, sketch, xs, absolute_values(points))
+            top = [x for x, row in zip(xs, points) if absolute_edge(row) == "top"]
+            draw_edges(ax, sketch, top, [x for x, row in zip(xs, points) if absolute_edge(row) == "bottom"], index)
+            labels.append((index, top, "saturated"))
+        label_top_edges(ax, labels)
+        edges.update(twin_handles(any_dodged))
+        ax.set_xlabel("true number of distinct values, n")
+        ax.set_ylabel("RMSE of the estimate, distinct values (95% CI)")
+        fig.suptitle(f"RMSE against cardinality, every sketch at {bits // BITS_PER_KIB} KiB ({bits:,} bits; "
+                     "64 hash seeds per point)", x=0.06, ha="left", color=INK, fontsize=11)
+        return finish(fig, {**sketch_handles(), **edges}, stem, ncol=3, top=0.9)
 
 
 def confirmed_share(group: list[dict]) -> float:
@@ -471,10 +602,11 @@ def plot_speed_vs_accuracy(rows: list[dict], stem: Path) -> list[Path]:
     the top edge."""
     with plt.rc_context(FIGURE_STYLE):
         fig, axes = plt.subplots(1, len(BUDGETS), figsize=(12, 4.4), sharex=True, sharey=True)
-        drawn, fastest_limit = False, 0.0
+        drawn, fastest_limit, pending = False, 0.0, []
         for ax, bits in zip(axes, BUDGETS):
             percent_axis(ax)
             ax.set_title(f"{bits // BITS_PER_KIB} KiB", loc="left")
+            labels = []
             for index, sketch in enumerate(SKETCHES):
                 times, found = nanoseconds_per_value(rows, sketch, bits), at_n(rows, sketch, bits, SPEED_ACCURACY_N)
                 if not times or found is None:
@@ -487,11 +619,16 @@ def plot_speed_vs_accuracy(rows: list[dict], stem: Path) -> list[Path]:
                     ax.plot([speed], [percent_of_n(found["rmse"], found)], linestyle="none", marker=style["marker"],
                             markersize=8, color=style["color"], markeredgecolor=SURFACE, markeredgewidth=1)
                 else:
-                    draw_edges(ax, sketch, [speed] if edge(found) == "top" else [], [speed] if edge(found) == "bottom" else [], index)
+                    top = [speed] if edge(found) == "top" else []
+                    draw_edges(ax, sketch, top, [speed] if edge(found) == "bottom" else [], index)
+                    labels.append((index, top, top_edge_text([found])))
+            pending.append((ax, labels))
         if not drawn:
             plt.close(fig)
             return []
         axes[0].set_xlim(0, fastest_limit * 1.12)  # shared: the slowest sketch fits in every panel
+        for ax, labels in pending:
+            label_top_edges(ax, labels)
         axes[0].set_ylabel(f"relative RMSE at n = {SPEED_ACCURACY_N:,}, % of n")
         fig.supxlabel(f"nanoseconds per value (median, streams of {MIN_TIMED_VALUES:,}+ values); lower left is better",
                       color=INK_SECONDARY)
@@ -595,6 +732,7 @@ def draw_all(rows: list[dict], output: Path) -> list[Path]:
         *plot_time_per_value(rows, output / "time_per_value"),
         *plot_time_vs_length(rows, output / "time_vs_length"),
         *plot_speed_vs_accuracy(rows, output / "speed_vs_accuracy"),
+        *plot_rmse_vs_n_at_budget(rows, output / f"rmse_vs_n_{LARGEST_BUDGET // BITS_PER_KIB}kib"),
     ]
     numbers = output / "comparison_key_numbers.md"
     numbers.parent.mkdir(parents=True, exist_ok=True)

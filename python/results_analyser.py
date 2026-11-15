@@ -125,13 +125,13 @@ class Summary:
 # predicted RMSE). The constants mirror the C++ sketches, so keep them in step with the code.
 
 BLOOM_HASHES = 3  # k_ in cpp/src/bloom_filter.cpp
-HLL_REGISTER_BITS = 6  # HyperLogLog::kRegisterBits
+HLL_REGISTER_BITS = 8  # HyperLogLog::kRegisterBits; HyperLogLog++ also keeps one byte per register
 HLL_SMALL_RANGE = 2.5  # HyperLogLog switches to Linear Counting when the estimate is <= 2.5 r
 KMV_BITS_PER_VALUE = 64  # proposal: KMV stores up to B / 64 hash values
 HLLPP_SPARSE_PRECISION = 25  # kSparsePrecision in hyperloglog_plus_plus.cpp: 2^25 sparse slots
-# HyperLogLog++ leaves sparse mode once its compressed list outgrows the dense registers, near
-# 0.2 r (about 4 bytes per entry against 6/8 of a byte per register); below 0.1 r every seed is
-# still sparse.
+# HyperLogLog++ leaves sparse mode once its compressed list outgrows the paper's six-bit dense
+# size, near 0.2 r (about 4 bytes per entry against 6/8 of a byte per register), even though its
+# dense registers are now whole bytes; below 0.1 r every seed is still sparse.
 HLLPP_SPARSE_SURE = 0.1
 
 
