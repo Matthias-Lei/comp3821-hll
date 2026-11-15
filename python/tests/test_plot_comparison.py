@@ -18,6 +18,7 @@ from plot_comparison import (
     one_per_observations_n,
     rmse_cell,
     state,
+    times_by_length,
     values_per_stream,
 )
 from plot_sketches import stream_kind
@@ -81,6 +82,20 @@ def test_stream_length_and_time_per_value_use_long_distribution_streams_only() -
     assert times == [pytest.approx(10.0), pytest.approx(10.0)]  # 10 ms over 1,000,000 values, twice
 
 
+def test_times_by_length_groups_by_stream_length() -> None:
+    by_length = times_by_length(made_up_rows(), "HyperLogLog", 8192)
+    assert list(by_length) == [10_000, 1_000_000]
+    assert by_length[10_000] == [pytest.approx(1000.0)]  # 10 ms over 10,000 values
+    assert by_length[1_000_000] == [pytest.approx(10.0), pytest.approx(10.0)]
+
+
+def test_times_by_length_groups_by_stream_length() -> None:
+    by_length = times_by_length(made_up_rows(), "HyperLogLog", 8192)
+    assert list(by_length) == [10_000, 1_000_000]
+    assert by_length[10_000] == [pytest.approx(1000.0)]  # 10 ms over 10,000 values
+    assert by_length[1_000_000] == [pytest.approx(10.0), pytest.approx(10.0)]
+
+
 def test_merge_shares_are_percent_of_seeds() -> None:
     rows = made_up_rows()
     assert merge_shares(rows, "HyperLogLogPlusPlus", 8192) == [(1000, pytest.approx(62.5))]
@@ -127,7 +142,7 @@ def test_confirmation_counts_each_observations_n_once_in_the_second_table() -> N
 def test_draw_all_writes_every_figure_and_the_key_numbers(tmp_path: Path) -> None:
     paths = draw_all(made_up_rows(), tmp_path)
     stems = ("relative_rmse_vs_n", "relative_bias_vs_n", "equal_memory", "theory_confirmed", "theory_ratio",
-             "merge", "time_per_value")
+             "merge", "time_per_value", "time_vs_length", "speed_vs_accuracy")
     expected = {f"{stem}.{suffix}" for stem in stems for suffix in ("pdf", "png")} | {"comparison_key_numbers.md"}
     assert {path.name for path in paths} == expected
     assert all(path.stat().st_size > 0 for path in paths)

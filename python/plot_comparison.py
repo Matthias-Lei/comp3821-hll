@@ -22,6 +22,10 @@ data/analysis-all/figures/comparison/:
    one built over the whole stream, against n.
 7. time_per_value: nanoseconds per value, by sketch and budget, on the distribution
    generator's streams of 1,000,000 or more values.
+8. time_vs_length: nanoseconds per value against the number of values in the stream, one panel
+   per budget (start-up cost on short streams, the steady rate on long ones).
+9. speed_vs_accuracy: each sketch at each budget as one point, nanoseconds per value against
+   relative RMSE at n = 100,000.
 
 comparison_key_numbers.md has the tables the text quotes: memory used, relative RMSE at fixed n,
 theory confirmed, saturation, merge exactness and speed.
@@ -61,6 +65,7 @@ from results_analyser import MERGE_SUFFIX, hyperloglog_registers  # noqa: E402
 
 N_TARGETS = (1_000, 10_000, 100_000, 1_000_000)  # n of the equal-memory panels and tables
 MIN_TIMED_VALUES = 1_000_000  # long enough that the time per value is not start-up cost
+SPEED_ACCURACY_N = 100_000  # the n whose relative RMSE the speed-against-accuracy figure uses
 NSAMPLE = re.compile(r"_nsample(\d+)")
 HLLPP_DENSE_SWITCH = 0.2  # HyperLogLog++ leaves sparse mode near 0.2 r (see results_analyser)
 
@@ -127,14 +132,19 @@ def judged_groups(rows: list[dict], sketch: str, bits: int | None = None) -> lis
             and row["rmse_confirmed"] is not None and (bits is None or row["bits"] == bits)]
 
 
-def nanoseconds_per_value(rows: list[dict], sketch: str, bits: int) -> list[float]:
-    """Time per value on every distribution generator stream of at least MIN_TIMED_VALUES values."""
-    times = []
+def times_by_length(rows: list[dict], sketch: str, bits: int) -> dict[int, list[float]]:
+    """Nanoseconds per value on every distribution generator stream, by the stream's number of values."""
+    by_length: dict[int, list[float]] = {}
     for row in rows:
         length = values_per_stream(row["stream"]) if row["kind"] == "nsample" else None
-        if row["sketch"] == sketch and row["bits"] == bits and length and length >= MIN_TIMED_VALUES and row["mean_time_ms"]:
-            times.append(row["mean_time_ms"] * 1e6 / length)
-    return times
+        if row["sketch"] == sketch and row["bits"] == bits and length and row["mean_time_ms"]:
+            by_length.setdefault(length, []).append(row["mean_time_ms"] * 1e6 / length)
+    return dict(sorted(by_length.items()))
+
+
+def nanoseconds_per_value(rows: list[dict], sketch: str, bits: int) -> list[float]:
+    """Time per value on every distribution generator stream of at least MIN_TIMED_VALUES values."""
+    return [t for length, times in times_by_length(rows, sketch, bits).items() if length >= MIN_TIMED_VALUES for t in times]
 
 
 def merge_shares(rows: list[dict], sketch: str, bits: int) -> list[tuple[int, float]]:
@@ -424,19 +434,23 @@ def plot_merge(rows: list[dict], stem: Path) -> list[Path]:
         return finish(fig, handles, stem, ncol=2)
 
 
-def quartile_points(times_by_bits: dict[int, list[float]]) -> tuple[list[float], list[float], list[float], list[float]]:
-    """(KiB, median, median - Q1, Q3 - median) for every budget with at least two timings."""
-    kib, median, down, up = [], [], [], []
-    for bits in BUDGETS:
-        times = times_by_bits.get(bits, [])
-        if len(times) < 2:
+def quartiles(groups: dict[float, list[float]]) -> tuple[list[float], list[float], list[float], list[float]]:
+    """(x, median, median - Q1, Q3 - median) for every x with at least two values."""
+    xs, median, down, up = [], [], [], []
+    for x, values in groups.items():
+        if len(values) < 2:
             continue
-        q1, q2, q3 = statistics.quantiles(times, n=4)
-        kib.append(bits / BITS_PER_KIB)
+        q1, q2, q3 = statistics.quantiles(values, n=4)
+        xs.append(x)
         median.append(q2)
         down.append(q2 - q1)
         up.append(q3 - q2)
-    return kib, median, down, up
+    return xs, median, down, up
+
+
+def quartile_points(times_by_bits: dict[int, list[float]]) -> tuple[list[float], list[float], list[float], list[float]]:
+    """(KiB, median, median - Q1, Q3 - median) for every budget with at least two timings."""
+    return quartiles({bits / BITS_PER_KIB: times_by_bits.get(bits, []) for bits in BUDGETS})
 
 
 def plot_time_per_value(rows: list[dict], stem: Path) -> list[Path]:
@@ -465,6 +479,67 @@ def plot_time_per_value(rows: list[dict], stem: Path) -> list[Path]:
         ax.legend(loc="lower left", bbox_to_anchor=(0, 1.0), ncol=5)
         fig.tight_layout()
         return save(fig, stem)
+
+
+def plot_time_vs_length(rows: list[dict], stem: Path) -> list[Path]:
+    """Median nanoseconds per value (interquartile range) against the stream's number of values,
+    one panel per budget: start-up cost on short streams, the steady rate on long ones."""
+    timed = {s: {bits: times_by_length(rows, s, bits) for bits in BUDGETS} for s in SKETCHES}
+    if not any(len(t) >= 2 for by_bits in timed.values() for by_length in by_bits.values() for t in by_length.values()):
+        return []
+    with plt.rc_context(FIGURE_STYLE):
+        fig, axes = plt.subplots(2, 2, figsize=(9.5, 7.5), sharex=True, sharey=True)
+        top = 0.0
+        for ax, bits in zip(axes.flat, BUDGETS):
+            ax.set_title(f"{bits // BITS_PER_KIB} KiB ({bits:,} bits)", loc="left")
+            ax.set_xscale("log")
+            for index, sketch in enumerate(SKETCHES):
+                style = SKETCH_STYLE[sketch]
+                xs, median, down, up = quartiles(timed[sketch][bits])
+                top = max([top, *(m + u for m, u in zip(median, up))])
+                dodge = 2 ** (TIME_DODGE * 2 * (index - (len(SKETCHES) - 1) / 2))
+                ax.errorbar([x * dodge for x in xs], median, yerr=[down, up], color=style["color"], linestyle=style["linestyle"],
+                            marker=style["marker"], markersize=5, linewidth=1.5, elinewidth=0.8, capsize=0)
+        axes.flat[0].set_ylim(0, top * 1.05)  # shared: every interquartile range fits
+        fig.suptitle("Update speed against stream length (distribution generator streams, hashing included)",
+                     x=0.06, ha="left", color=INK, fontsize=11)
+        fig.supxlabel("values in the stream", color=INK_SECONDARY)
+        fig.supylabel("nanoseconds per value (median, interquartile range)", color=INK_SECONDARY)
+        return finish(fig, sketch_handles(), stem, top=0.9)
+
+
+def plot_speed_vs_accuracy(rows: list[dict], stem: Path) -> list[Path]:
+    """Each sketch at each budget as one point: median nanoseconds per value (streams of
+    MIN_TIMED_VALUES+ values) against relative RMSE at n = SPEED_ACCURACY_N. Saturated points go on
+    the top edge."""
+    with plt.rc_context(FIGURE_STYLE):
+        fig, axes = plt.subplots(1, len(BUDGETS), figsize=(12, 4.4), sharex=True, sharey=True)
+        drawn, fastest_limit = False, 0.0
+        for ax, bits in zip(axes, BUDGETS):
+            percent_axis(ax)
+            ax.set_title(f"{bits // BITS_PER_KIB} KiB", loc="left")
+            for index, sketch in enumerate(SKETCHES):
+                times, found = nanoseconds_per_value(rows, sketch, bits), at_n(rows, sketch, bits, SPEED_ACCURACY_N)
+                if not times or found is None:
+                    continue
+                drawn = True
+                speed = statistics.median(times)
+                fastest_limit = max(fastest_limit, speed)
+                if edge(found) is None:
+                    style = SKETCH_STYLE[sketch]
+                    ax.plot([speed], [percent_of_n(found["rmse"], found)], linestyle="none", marker=style["marker"],
+                            markersize=8, color=style["color"], markeredgecolor=SURFACE, markeredgewidth=1)
+                else:
+                    draw_edges(ax, sketch, [speed] if edge(found) == "top" else [], [speed] if edge(found) == "bottom" else [], index)
+        if not drawn:
+            plt.close(fig)
+            return []
+        axes[0].set_xlim(0, fastest_limit * 1.12)  # shared: the slowest sketch fits in every panel
+        axes[0].set_ylabel(f"relative RMSE at n = {SPEED_ACCURACY_N:,}, % of n")
+        fig.supxlabel(f"nanoseconds per value (median, streams of {MIN_TIMED_VALUES:,}+ values); lower left is better",
+                      color=INK_SECONDARY)
+        fig.suptitle("Speed against accuracy at equal memory", x=0.06, ha="left", color=INK, fontsize=11)
+        return finish(fig, {**sketch_handles(), **edge_handles(exact=False)}, stem, ncol=3, top=0.84)
 
 
 # --- Key numbers ----------------------------------------------------------------------------
@@ -561,6 +636,8 @@ def draw_all(rows: list[dict], output: Path) -> list[Path]:
         *plot_theory_ratio(rows, output / "theory_ratio"),
         *plot_merge(rows, output / "merge"),
         *plot_time_per_value(rows, output / "time_per_value"),
+        *plot_time_vs_length(rows, output / "time_vs_length"),
+        *plot_speed_vs_accuracy(rows, output / "speed_vs_accuracy"),
     ]
     numbers = output / "comparison_key_numbers.md"
     numbers.parent.mkdir(parents=True, exist_ok=True)
