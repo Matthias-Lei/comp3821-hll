@@ -12,7 +12,9 @@ from plot_sketches import (
     K_MINIMUM_VALUES,
     LINEAR_COUNTING,
     SPECS,
+    absolute_edge,
     draw_sketch,
+    plot_memory_used,
     key_numbers,
     kmv_k,
     plot_rmse_vs_theory,
@@ -129,10 +131,24 @@ def test_rmse_figure_draws_groups_where_the_theory_is_not_judged(tmp_path: Path)
 def test_draw_sketch_writes_every_figure_and_the_key_numbers(tmp_path: Path, name: str) -> None:
     spec = SPECS[name]
     paths = draw_sketch(made_up_rows(name), spec, tmp_path)
-    figures = ["rmse_vs_theory", "relative_rmse_by_budget", "bias", "by_distribution"] + (["saturation"] if spec.hashes else [])
+    figures = ["rmse_vs_theory", "rmse_by_budget", "relative_rmse_by_budget", "bias", "by_distribution"]
+    figures += ["saturation"] if spec.hashes else []  # the made-up rows' memory is fixed: no memory_used figure
     expected = {f"{spec.short}_{figure}.{suffix}" for figure in figures for suffix in ("pdf", "png")}
     assert {path.name for path in paths} == expected | {f"{spec.short}_key_numbers.md"}
     assert all(path.stat().st_size > 0 for path in paths)
+
+
+def test_memory_figure_only_for_a_sketch_whose_memory_varies(tmp_path: Path) -> None:
+    fixed = made_up_rows("HyperLogLog")
+    assert plot_memory_used(fixed, HYPERLOGLOG, tmp_path / "fixed") == []
+    varying = [{**r, "bits_used": 32 * r["true_n"] if r["true_n"] < 1000 else r["bits"]} for r in made_up_rows("HyperLogLogPlusPlus")]
+    assert len(plot_memory_used(varying, HYPERLOGLOG_PLUS_PLUS, tmp_path / "varying")) == 2
+
+
+def test_absolute_edge_puts_saturated_on_top_and_exact_on_the_bottom() -> None:
+    assert absolute_edge(row("LinearCounting", saturated=3)) == "top"
+    assert absolute_edge(row("KMinVals", rmse=0.0)) == "bottom"
+    assert absolute_edge(row("HyperLogLog", rmse=0.001)) is None  # tiny but drawn: no floor on an absolute axis
 
 
 def test_draw_sketch_without_rows_writes_only_the_key_numbers(tmp_path: Path) -> None:

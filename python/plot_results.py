@@ -46,6 +46,8 @@ SKETCH_STYLE = {
     # Slot 4 passes the validator for lines (adjacent pairs); yellow is under 3:1 against the
     # surface, so the line ends are labelled directly.
     "KMinVals": {"color": "#eda100", "marker": "D", "label": "K-Minimum Values"},
+    # Slot 5 (magenta) also passes for lines and is under 3:1, so it is labelled directly too.
+    "HyperLogLogPlusPlus": {"color": "#e87ba4", "marker": "v", "label": "HyperLogLog++"},
 }
 SURFACE = "#fcfcfb"
 INK = "#0b0b0b"

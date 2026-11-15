@@ -435,34 +435,46 @@ def percent_axis(ax: plt.Axes) -> None:
     ax.yaxis.set_minor_formatter(FuncFormatter(lambda *_: ""))
 
 
-def plot_relative_rmse_by_budget(rows: list[dict], spec: SketchSpec, stem: Path) -> list[Path]:
-    """Relative RMSE against n with every budget on one axis: the measured points (95% CI, one
-    observations stream per n) and the predicted curve in the budget's colour. Saturated groups
-    sit on the top edge, exact ones (or under PERCENT_FLOOR) on the bottom edge."""
+def absolute_edge(row: dict) -> str | None:
+    """Where a row goes on an absolute RMSE axis: 'top' (saturated), 'bottom' (RMSE exactly 0,
+    which a log axis cannot show), or None (drawn as a point)."""
+    return {"saturated": "top", "exact": "bottom"}.get(state(row))
+
+
+def plot_rmse_by_budget(rows: list[dict], spec: SketchSpec, stem: Path, relative: bool) -> list[Path]:
+    """RMSE (relative: % of n; otherwise absolute) against the cardinality n with every budget on one
+    axis: the measured points (95% CI, one observations stream per n) and the predicted curve in
+    the budget's colour. Saturated groups sit on the top edge, exact ones on the bottom edge."""
     series = {bits: by_n(rows, spec.name, bits) for bits in BUDGETS}
     if not any(series.values()):
         return []
     all_n = [row["true_n"] for points in series.values() for row in points]
+    where_of = edge if relative else absolute_edge
+    scale = (lambda value, row: percent_of_n(value, row)) if relative else (lambda value, row: value)
     with plt.rc_context(FIGURE_STYLE):
         fig, ax = plt.subplots(figsize=(9, 5.4))
         ax.set_xscale("log")
-        percent_axis(ax)
+        if relative:
+            percent_axis(ax)
+        else:
+            ax.set_yscale("log")
         ax.axvspan(min(all_n) / 1.5, MIN_JUDGED_N, color=REGION_FILL, linewidth=0, zorder=0)
         handles: dict[str, object] = {}
         transform = ax.get_xaxis_transform()
         for index, bits in enumerate(BUDGETS):
             colour = BUDGET_COLOURS[bits]
             ns, curve = predicted_rmse_curve(spec, bits, min(all_n), max(all_n))
-            ax.plot(ns, [100 * rmse / n for n, rmse in zip(ns, curve)], color=colour, linewidth=1.2, linestyle=MARK_DASH)
-            points = [row for row in series[bits] if edge(row) is None]
-            relative = [percent_of_n(row["rmse"], row) for row in points]
-            ax.errorbar([row["true_n"] for row in points], relative,
-                        yerr=log_error_bars(relative, [percent_of_n(row["rmse_low"], row) for row in points],
-                                            [percent_of_n(row["rmse_high"], row) for row in points]),
+            ax.plot(ns, [scale(rmse, {"true_n": n}) for n, rmse in zip(ns, curve)], color=colour, linewidth=1.2,
+                    linestyle=MARK_DASH)
+            points = [row for row in series[bits] if where_of(row) is None]
+            values = [scale(row["rmse"], row) for row in points]
+            ax.errorbar([row["true_n"] for row in points], values,
+                        yerr=log_error_bars(values, [scale(row["rmse_low"], row) for row in points],
+                                            [scale(row["rmse_high"], row) for row in points]),
                         fmt="o-", color=colour, markersize=4.5, linewidth=1.2, elinewidth=0.8, capsize=0,
                         markeredgecolor=SURFACE, markeredgewidth=0.6)
             for where, y in (("top", 1 - EDGE_STEP * (index + 0.5)), ("bottom", EDGE_STEP * (index + 0.5))):
-                xs = [row["true_n"] for row in series[bits] if edge(row) == where]
+                xs = [row["true_n"] for row in series[bits] if where_of(row) == where]
                 if xs:
                     ax.plot(xs, [y] * len(xs), "o", color=colour, markersize=5, markerfacecolor=SURFACE,
                             markeredgewidth=1.2, transform=transform, clip_on=False)
@@ -470,12 +482,45 @@ def plot_relative_rmse_by_budget(rows: list[dict], spec: SketchSpec, stem: Path)
         hollow = {"linestyle": "none", "marker": "o", "markersize": 6, "color": INK_MUTED, "markerfacecolor": SURFACE}
         handles[f"dashed: predicted, {spec.theory_label}"] = Line2D([], [], color=INK_MUTED, linewidth=1.2, linestyle=MARK_DASH)
         handles["hollow, top edge: a seed saturated (no estimate)"] = Line2D([], [], **hollow)
-        handles[f"hollow, bottom edge: RMSE 0 or under {PERCENT_FLOOR:g}% of n"] = Line2D([], [], **hollow)
+        bottom = f"RMSE 0 or under {PERCENT_FLOOR:g}% of n" if relative else "RMSE exactly 0"
+        handles[f"hollow, bottom edge: {bottom}"] = Line2D([], [], **hollow)
         handles[f"shaded: n < {MIN_JUDGED_N}, not judged"] = Patch(color=REGION_FILL)
-        ax.set_xlabel("true number of distinct values, n")
-        ax.set_ylabel("relative RMSE, % of n (95% CI)")
-        ax.set_title(f"{spec.label}: relative RMSE against n at each memory budget (64 hash seeds per point)",
+        what = "relative RMSE" if relative else "RMSE"
+        ax.set_xlabel("cardinality: true number of distinct values, n")
+        ax.set_ylabel("relative RMSE, % of n (95% CI)" if relative else "RMSE of the estimate (95% CI)")
+        ax.set_title(f"{spec.label}: {what} against cardinality at each memory budget (64 hash seeds per point)",
                      loc="left", color=INK, fontsize=11, pad=72)
+        ax.legend(list(handles.values()), list(handles.keys()), loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2)
+        fig.tight_layout()
+        return save(fig, stem)
+
+
+def plot_relative_rmse_by_budget(rows: list[dict], spec: SketchSpec, stem: Path) -> list[Path]:
+    return plot_rmse_by_budget(rows, spec, stem, relative=True)
+
+
+def plot_memory_used(rows: list[dict], spec: SketchSpec, stem: Path) -> list[Path]:
+    """Bits of sketch state actually used against n at each budget (one observations stream per n),
+    with each budget as a dotted line. Only for sketches whose memory varies with n (HyperLogLog++,
+    whose sparse list grows until it switches to dense registers)."""
+    series = {bits: by_n(rows, spec.name, bits) for bits in BUDGETS}
+    if len({row["bits_used"] for points in series.values() for row in points}) <= len(BUDGETS):
+        return []
+    with plt.rc_context(FIGURE_STYLE):
+        fig, ax = plt.subplots(figsize=(9, 5))
+        ax.set_xscale("log")
+        ax.set_yscale("symlog", linthresh=64)
+        handles: dict[str, object] = {}
+        for bits in BUDGETS:
+            colour = BUDGET_COLOURS[bits]
+            points = series[bits]
+            ax.plot([row["true_n"] for row in points], [row["bits_used"] for row in points], "o-", color=colour,
+                    markersize=4.5, linewidth=1.2, markeredgecolor=SURFACE, markeredgewidth=0.6)
+            ax.axhline(bits, color=colour, linewidth=1, linestyle=(0, (1, 2)))
+            handles[f"{bits // BITS_PER_KIB} KiB budget (dotted: {bits:,} bits)"] = Line2D([], [], color=colour, marker="o", linewidth=1.2)
+        ax.set_xlabel("cardinality: true number of distinct values, n")
+        ax.set_ylabel("bits of sketch state used")
+        ax.set_title(f"{spec.label}: memory actually used against cardinality", loc="left", color=INK, fontsize=11, pad=36)
         ax.legend(list(handles.values()), list(handles.keys()), loc="lower left", bbox_to_anchor=(0, 1.0), ncol=2)
         fig.tight_layout()
         return save(fig, stem)
@@ -622,7 +667,9 @@ def draw_sketch(rows: list[dict], spec: SketchSpec, output: Path) -> list[Path]:
     """Every figure and the key numbers of one sketch, in output/, named <short>_<figure>."""
     written = [
         *plot_rmse_vs_theory(rows, spec, output / f"{spec.short}_rmse_vs_theory"),
+        *plot_rmse_by_budget(rows, spec, output / f"{spec.short}_rmse_by_budget", relative=False),
         *plot_relative_rmse_by_budget(rows, spec, output / f"{spec.short}_relative_rmse_by_budget"),
+        *plot_memory_used(rows, spec, output / f"{spec.short}_memory_used"),
         *plot_bias(rows, spec, output / f"{spec.short}_bias"),
         *plot_saturation(rows, spec, output / f"{spec.short}_saturation"),
         *plot_by_distribution(rows, spec, output / f"{spec.short}_by_distribution"),
